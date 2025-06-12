@@ -21,9 +21,9 @@ const organizerSchema = new Schema({
     PhoneNo:{
         type:Number
     },
-    role:{
-        type:String,
-        default:"organizer",
+     roleId:{
+        type:Schema.Types.ObjectId,
+        ref:"role"
     },
      events: [{
     type: mongoose.Schema.Types.ObjectId,

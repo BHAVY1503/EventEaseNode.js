@@ -33,6 +33,32 @@ const organizerRegister = async(req,res)=>{
     }
 }
 
+const organizerSignin = async(req,res)=>{
+
+    const email = req.body.email;
+    const password = req.body.password;
+
+    const foundOrganizerFromEmail = await organizerModel.findOne({email : email}).populate("roleId")
+    console.log(foundOrganizerFromEmail)
+
+    if (foundOrganizerFromEmail != null){
+        isMatch = bcrypt.compareSync(password, foundOrganizerFromEmail.password)
+    }
+
+    if(isMatch === true){
+        res.status(200).json({
+            message:"Signip Successfully",
+            data:foundOrganizerFromEmail
+        })
+    }else{
+        res.status(404).json({
+            message:"invalid cred"
+        })
+    }
+} 
+
+
+
 const getAllOrganizers = async(req,res)=>{
 
     const organizer = await organizerModel.find().populate("role")
@@ -79,5 +105,6 @@ module.exports = {
     organizerRegister,
     getAllOrganizers,
     getOrganizerById,
-    updateOrganizer
+    updateOrganizer,
+    organizerSignin
 }
