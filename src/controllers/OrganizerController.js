@@ -38,21 +38,24 @@ const organizerSignin = async(req,res)=>{
     const email = req.body.email;
     const password = req.body.password;
 
-    const foundOrganizerFromEmail = await organizerModel.findOne({email : email}).populate("roleId")
+    const foundOrganizerFromEmail = await organizerModel.findOne({email}).populate("roleId")
     console.log(foundOrganizerFromEmail)
 
-    if (foundOrganizerFromEmail != null){
-        isMatch = bcrypt.compareSync(password, foundOrganizerFromEmail.password)
+    if (!foundOrganizerFromEmail){
+        return res.status(404).json({
+            message:"Organizer not found.."
+        })
+    //   const isMatch = bcrypt.compareSync(password, foundOrganizerFromEmail.password)
     }
-
-    if(isMatch === true){
+    const isMatch = bcrypt.compareSync(password, foundOrganizerFromEmail.password)
+    if(isMatch){
         res.status(200).json({
             message:"Signip Successfully",
             data:foundOrganizerFromEmail
         })
     }else{
-        res.status(404).json({
-            message:"invalid cred"
+        res.status(401).json({
+            message:"invalid cendidate.."
         })
     }
 } 

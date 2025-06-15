@@ -87,22 +87,54 @@ const getAllEvents = async(req,res)=>{
     
 }
 
-const updateEvent = async(req,res)=>{
+const updateEvent = async (req, res) => {
+  try {
+    const updateData = { ...req.body };
 
-    try{
-        const updateEvent = await eventModel.findByIdAndUpdate(req.params.id, req.body, {new:true})
-
-        res.status(200).json({
-            message:"Event updated Successfully",
-            data:updateEvent
-        })
-    }catch(err){
-        res.status(500).json({
-            message:"error while update Event",
-            err:err
-        })
+    // Convert dates
+    if (updateData.startDate) {
+      updateData.startDate = new Date(updateData.startDate);
     }
-}
+    if (updateData.endDate) {
+      updateData.endDate = new Date(updateData.endDate);
+    }
+
+    //  If a new image is uploaded
+    if (req.file) {
+      const cloudinaryResponse = await cloudinaryUtil.uploadFileToCloudinary(req.file);
+      updateData.eventImgUrl = cloudinaryResponse.secure_url; 
+    }
+
+    const updatedEvent = await eventModel.findByIdAndUpdate(req.params.id, updateData, { new: true });
+
+    res.status(200).json({
+      message: "Event updated successfully",
+      data: updatedEvent,
+    });
+  } catch (err) {
+    res.status(500).json({
+      message: "Error while updating event",
+      error: err.message,
+    });
+  }
+};
+
+// const updateEvent = async(req,res)=>{
+
+//     try{
+//         const updateEvent = await eventModel.findByIdAndUpdate(req.params.id, req.body, {new:true})
+
+//         res.status(200).json({
+//             message:"Event updated Successfully",
+//             data:updateEvent
+//         })
+//     }catch(err){
+//         res.status(500).json({
+//             message:"error while update Event",
+//             err:err
+//         })
+//     }
+// }
 
 const deleteEvent = async(req,res)=>{
 
@@ -134,10 +166,32 @@ const getEventByUserId = async(req,res)=>{
   }
 }
 
+const getEventById = async(req,res)=>{
+ 
+  try{
+    const event = await eventModel.findById(req.params.id)
+    if(!event){
+      res.status(404).json({
+        message:"no event found.."
+      })
+      }else{
+        res.status(200).json({
+          message:"event found successfully..",
+          data:event
+        })
+      }
+    }catch(err){
+      message:err
+    }
+  }
+
+
+
 module.exports = {
     addEventWithFile,
     getAllEvents,
     updateEvent,
     deleteEvent,
-    getEventByUserId
+    getEventByUserId,
+    getEventById
 }

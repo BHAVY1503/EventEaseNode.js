@@ -14,9 +14,10 @@ const upload = multer({ storage: storage });
 
 routes.post("/addeventwithfile", upload.single("image"), eventController.addEventWithFile)
 routes.get("/getallevents",eventController.getAllEvents)
-routes.put("/updateevent/:id", eventController.updateEvent)
+routes.put("/updateevent/:id",upload.single("image"), eventController.updateEvent)
 routes.delete("/deleteevent/:id",eventController.deleteEvent)
 routes.get("/geteventbyuserid/:userId",eventController.getEventByUserId)
+routes.get("/geteventbyid/:id",eventController.getEventById)
 
 
 module.exports = routes
