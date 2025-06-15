@@ -7,5 +7,6 @@ routes.get("/organizer", OrganizerController.getAllOrganizers)
 routes.get("/organizer/:id", OrganizerController.getOrganizerById)
 routes.post("/updateorganizer/:id", OrganizerController.updateOrganizer)
 routes.post("/organizer/signin", OrganizerController.organizerSignin)
+routes.delete("/organizer/:id",OrganizerController.deleteOrganizer)
 
 module.exports = routes

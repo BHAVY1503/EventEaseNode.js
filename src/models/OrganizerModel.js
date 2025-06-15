@@ -36,6 +36,7 @@ const organizerSchema = new Schema({
     country: { type: String },
     zip: {type: String}
   },
+    profileImg: { type: String, default: "" },
     createdAt: {
     type: Date,
     default: Date.now,

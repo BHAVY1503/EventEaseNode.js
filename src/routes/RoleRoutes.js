@@ -4,5 +4,6 @@ routes.get("/roles",roleController.getAllRoles)
 routes.post("/roles",roleController.addRoles)
 routes.delete("/roles/:id",roleController.deleteRoles)
 routes.get("/roles/:id",roleController.getRoleById)
+routes.delete("/roles/:id",roleController.deleteRoles)
 
 module.exports = routes

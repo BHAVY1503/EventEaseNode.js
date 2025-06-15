@@ -6,5 +6,6 @@ routes.post("/user",userController.signup)
 routes.get("/user", userController.getAllUsers)
 routes.get("/user/:id", userController.getUserById)
 routes.post("/user/login",userController.loginUser)
+routes.delete("/user/:id", userController.deleteUser)
 
 module.exports = routes

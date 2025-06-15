@@ -50,9 +50,7 @@ const signup = async(req,res)=>{
             message:"error creating user",
             data:err.message
         })
-    }
-
-    
+    } 
 }
 
 
@@ -76,10 +74,22 @@ const getUserById = async(req,res)=>{
     })
 }
 
+const deleteUser = async(req,res)=>{
+
+  const user = await userModel.findByIdAndDelete(req.params.id)
+
+  res.json({
+    message:"User deleted",
+    data:user
+  })
+}
+
+ 
 module.exports = {
     signup,
     getAllUsers,
     getUserById,
-    loginUser
+    loginUser,
+    deleteUser
 
  }

@@ -101,10 +101,21 @@ const updateOrganizer = async(req,res)=>{
 }
 }
 
+const deleteOrganizer = async(req,res)=>{
+
+    const organizer = await organizerModel.findByIdAndDelete(req.params.id)
+
+    res.json({
+        message:"Organizer Deleted...",
+        data:organizer
+    })
+}
+
 module.exports = {
     organizerRegister,
     getAllOrganizers,
     getOrganizerById,
     updateOrganizer,
-    organizerSignin
+    organizerSignin,
+    deleteOrganizer
 }
