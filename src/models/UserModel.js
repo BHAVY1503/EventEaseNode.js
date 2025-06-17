@@ -24,7 +24,19 @@ const userSchema = new Schema({
     status:{
         type:Boolean,
         default:true
-    }
+    },
+    phoneNumber:{
+        type:Number
+    },
+    stateId: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: "state"
+},
+cityId: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: "city"
+}
+
 })
 
 module.exports = mongoose.model("user",userSchema)

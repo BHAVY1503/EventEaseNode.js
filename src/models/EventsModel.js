@@ -37,11 +37,23 @@ const eventsSchema = new Schema({
     userId:{
         type:Schema.Types.ObjectId,
         ref:"organizer",
-        required:true
+        // required:true
     },
     eventImgUrl:{
         type:String
     },
+    bookedSeats: {
+  type: Number,
+  default: 0
+},
+
+    // rating: {
+    // type: Number,
+    // min: 1,
+    // max: 5,
+    // default: 0,
+    // },
+
     
 
 })

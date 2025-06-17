@@ -18,6 +18,14 @@ routes.put("/updateevent/:id",upload.single("image"), eventController.updateEven
 routes.delete("/deleteevent/:id",eventController.deleteEvent)
 routes.get("/geteventbyuserid/:userId",eventController.getEventByUserId)
 routes.get("/geteventbyid/:id",eventController.getEventById)
+routes.get("/stats", eventController.getStats); 
+routes.get("/geteventstats", eventController.getEventStats); //for total events and active events
+routes.post("/bookseat/:id", eventController.bookSeat);
+routes.get("/tickets/:userId", eventController.getTicketsByUser);
+routes.get("/getticketsbyuser/:userId",eventController.getTicketsByUser);
+
+
+
 
 
 module.exports = routes

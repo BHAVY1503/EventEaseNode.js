@@ -41,6 +41,15 @@ const organizerSchema = new Schema({
     type: Date,
     default: Date.now,
   },
+  stateId: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: "state"
+},
+cityId: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: "city"
+}
+
 })
 
 module.exports = mongoose.model("organizer",organizerSchema)
