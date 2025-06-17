@@ -1,8 +1,9 @@
 // routes/TicketRoutes.js
 const express = require("express");
-const router = express.Router();
+const routes = express.Router();
 const TicketController = require("../controllers/TicketController");
 
-router.get("/organizer/:organizerId", TicketController.getTicketsByOrganizer);
+routes.get("/organizer/:organizerId", TicketController.getTicketsByOrganizer);
+routes.get("/usertickets/:userId", TicketController.getTicketsByUser);
 
-module.exports = router;
+module.exports = routes;

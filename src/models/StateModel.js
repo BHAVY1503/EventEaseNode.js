@@ -3,10 +3,10 @@ const Schema = mongoose.Schema
 
 const stateSchema = new Schema({
 
-    name:{
+    Name:{
         type:String,
         required:true,
-        uniqe:true
+        unique:true
     }
 })
 

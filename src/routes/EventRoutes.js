@@ -16,7 +16,7 @@ routes.post("/addeventwithfile", upload.single("image"), eventController.addEven
 routes.get("/getallevents",eventController.getAllEvents)
 routes.put("/updateevent/:id",upload.single("image"), eventController.updateEvent)
 routes.delete("/deleteevent/:id",eventController.deleteEvent)
-routes.get("/geteventbyuserid/:userId",eventController.getEventByUserId)
+routes.get("/geteventbyorganizerid/:organizerId",eventController.getEventByUserId)
 routes.get("/geteventbyid/:id",eventController.getEventById)
 routes.get("/stats", eventController.getStats); 
 routes.get("/geteventstats", eventController.getEventStats); //for total events and active events

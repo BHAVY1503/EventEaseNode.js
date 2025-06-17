@@ -3,17 +3,11 @@ const ticketModel = require("../models/TicketModal");
 const getTicketsByOrganizer = async (req, res) => {
   try {
     const tickets = await ticketModel.find({ organizerId: req.params.organizerId })
-       .populate("eventId", "name")       // Fetch event name
-      .populate("userId", "fullName email") // Optional: show who booked it
-      .populate("stateId", "name")       // State name
-      .populate("cityId", "name");       // City name ← semicolon was missing here
-
-  
-
-      // .populate("userId", "fullName email") // Only fetch user name and email
-      // .populate("stateId", "name")
-      // .populate("cityId", "name")
- 
+       .populate("eventId")       // Fetch event name
+      .populate("userId") // Optional: show who booked it
+      .populate("stateId", "Name")       // State name
+      .populate("cityId", "name")       // City name ← semicolon was missing here
+      .populate("organizerId")
     res.status(200).json({
       message: "Tickets fetched successfully",
       data: tickets
@@ -26,7 +20,28 @@ const getTicketsByOrganizer = async (req, res) => {
   }
 };
 
+const getTicketsByUser = async (req, res) => {
+  try {
+    const tickets = await ticketModel.find({ userId: req.params.userId })
+      .populate("eventId", "eventName startDate")
+      .populate("organizerId", "name")
+      .populate("stateId", "Name")
+      .populate("cityId", "name");
+
+    res.status(200).json({
+      message: "User tickets fetched successfully",
+      data: tickets
+    });
+  } catch (err) {
+    res.status(500).json({
+      message: "Error fetching user tickets",
+      error: err.message
+    });
+  }
+};
+
 
 module.exports = {
-  getTicketsByOrganizer
+  getTicketsByOrganizer,
+  getTicketsByUser
 };

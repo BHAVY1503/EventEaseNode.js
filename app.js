@@ -32,7 +32,10 @@ app.use("/city", cityRoutes)
 //ticket
 const ticketRoutes = require("./src/routes/TicketRoutes");
 app.use("/tickets",ticketRoutes);
-
+ 
+//feedback
+const feedBackRoutes = require("./src/routes/FeedBackRoutes");
+app.use(feedBackRoutes);
 
 mongoose.connect("mongodb://127.0.0.1:27017/EventEase").then(()=>{
     console.log("database connected....")
