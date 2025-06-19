@@ -8,9 +8,14 @@ const eventsSchema = new Schema({
         enum:['Conference','Exhibition','Gala Dinner', 'Incentive','Music consert', 'Meeting','ZoomMeeting', 'Other'],
         required:true
     },
+   
     eventName:{
         type:String,
         required:true
+    },
+     zoomUrl:{
+        type:String,
+        default:""
     },
     numberOfSeats:{
         type:Number,
@@ -40,12 +45,24 @@ const eventsSchema = new Schema({
         // required:true
     },
     eventImgUrl:{
-        type:String
+        type:String,
     },
     bookedSeats: {
   type: Number,
   default: 0
 },
+location:{
+    type:String,
+    default:""
+},
+ latitude: {
+    type: Number,
+    required: false,
+  },
+  longitude: {
+    type: Number,
+    required: false,
+  },
 
     // rating: {
     // type: Number,

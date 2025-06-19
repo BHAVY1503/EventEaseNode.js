@@ -1,36 +1,61 @@
 // const UserModel = require("../models/UserModel");
 const userModel = require("../models/UserModel")
 const bcrypt = require("bcrypt")
+const jwt = require("jsonwebtoken")
+const SECRET_KEY = "secret"
+ 
+const loginUser = async (req, res) => {
+  const { email, password } = req.body;
 
-const loginUser = async(req,res)=>{
-    
-    const email = req.body.email
-    const password = req.body.password
+  try {
+    const foundUser = await userModel.findOne({ email }).populate("roleId");
+    if (!foundUser) return res.status(404).json({ message: "Email not found" });
 
-  const foundUserFromEmail = await userModel.findOne({ email: email }).populate("roleId")
-  console.log(foundUserFromEmail);
-  
-  if (foundUserFromEmail != null) {
+    const isMatch = bcrypt.compareSync(password, foundUser.password);
+    if (!isMatch)
+      return res.status(401).json({ message: "Invalid credentials" });
 
-    const isMatch = bcrypt.compareSync(password, foundUserFromEmail.password);
+    const token = jwt.sign(
+      { id: foundUser._id, role: foundUser.roleId?.name },
+      SECRET_KEY,
+      { expiresIn: "1h" }
+    );
 
-    if (isMatch == true) {
-      res.status(200).json({
-        message: "login success",
-        data: foundUserFromEmail,
-      });
-    } else {
-      res.status(404).json({
-        message: "invalid cred..",
-      });
-    }
-  } else {
-    res.status(404).json({
-      message: "Email not found..",
-    });
+    res.status(200).json({ message: "Login successful", data: foundUser, token });
+  } catch (err) {
+    res.status(500).json({ message: "Login error", error: err.message });
   }
 };
 
+// const loginUser = async(req,res)=>{
+    
+//     const email = req.body.email
+//     const password = req.body.password
+
+//   const foundUserFromEmail = await userModel.findOne({ email: email }).populate("roleId")
+//   console.log(foundUserFromEmail);
+  
+//   if (foundUserFromEmail != null) {
+
+//     const isMatch = bcrypt.compareSync(password, foundUserFromEmail.password);
+
+//     if (isMatch == true) {
+//       res.status(200).json({
+//         message: "login success",
+//         data: foundUserFromEmail,
+//       });
+//     } else {
+//       res.status(404).json({
+//         message: "invalid cred..",
+//       });
+//     }
+//   } else {
+//     res.status(404).json({
+//       message: "Email not found..",
+//     });
+//   }
+// };
+ 
 const signup = async(req,res)=>{
  
     try{

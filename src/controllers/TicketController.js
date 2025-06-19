@@ -2,12 +2,16 @@ const ticketModel = require("../models/TicketModal");
 
 const getTicketsByOrganizer = async (req, res) => {
   try {
-    const tickets = await ticketModel.find({ organizerId: req.params.organizerId })
+    const rawTickets = await ticketModel.find({ organizerId: req.params.organizerId })
        .populate("eventId")       // Fetch event name
       .populate("userId") // Optional: show who booked it
       .populate("stateId", "Name")       // State name
       .populate("cityId", "name")       // City name ← semicolon was missing here
       .populate("organizerId")
+  
+       // Filter out tickets whose event was deleted
+    const tickets = rawTickets.filter(ticket => ticket.eventId);
+
     res.status(200).json({
       message: "Tickets fetched successfully",
       data: tickets

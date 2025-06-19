@@ -1,5 +1,8 @@
 const organizerModel = require("../models/OrganizerModel")
 const bcrypt = require("bcryptjs")
+const jwt = require("jsonwebtoken");
+const SECRET_KEY = "secret";
+
 
 
 const organizerRegister = async(req,res)=>{
@@ -33,34 +36,64 @@ const organizerRegister = async(req,res)=>{
     }
 }
 
-const organizerSignin = async(req,res)=>{
+// const organizerSignin = async(req,res)=>{
 
-    const email = req.body.email;
-    const password = req.body.password;
+//     const email = req.body.email;
+//     const password = req.body.password;
 
-    const foundOrganizerFromEmail = await organizerModel.findOne({email}).populate("roleId")
-    console.log(foundOrganizerFromEmail)
+//     const foundOrganizerFromEmail = await organizerModel.findOne({email}).populate("roleId")
+//     console.log(foundOrganizerFromEmail)
 
-    if (!foundOrganizerFromEmail){
-        return res.status(404).json({
-            message:"Organizer not found.."
-        })
-    //   const isMatch = bcrypt.compareSync(password, foundOrganizerFromEmail.password)
+//     if (!foundOrganizerFromEmail){
+//         return res.status(404).json({
+//             message:"Organizer not found.."
+//         })
+//     //   const isMatch = bcrypt.compareSync(password, foundOrganizerFromEmail.password)
+//     }
+//     const isMatch = bcrypt.compareSync(password, foundOrganizerFromEmail.password)
+//     if(isMatch){
+//         res.status(200).json({
+//             message:"Signip Successfully",
+//             data:foundOrganizerFromEmail
+//         })
+//     }else{
+//         res.status(401).json({
+//             message:"invalid cendidate.."
+//         })
+//     }
+// } 
+
+const organizerSignin = async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    const organizer = await organizerModel.findOne({ email }).populate("roleId");
+
+    if (!organizer) {
+      return res.status(404).json({ message: "Organizer not found.." });
     }
-    const isMatch = bcrypt.compareSync(password, foundOrganizerFromEmail.password)
-    if(isMatch){
-        res.status(200).json({
-            message:"Signip Successfully",
-            data:foundOrganizerFromEmail
-        })
-    }else{
-        res.status(401).json({
-            message:"invalid cendidate.."
-        })
+
+    const isMatch = bcrypt.compareSync(password, organizer.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: "Invalid credentials." });
     }
-} 
 
+    const token = jwt.sign(
+      { id: organizer._id, role: organizer.roleId.name },
+      SECRET_KEY,
+      { expiresIn: "1d" }
+    );
 
+    res.status(200).json({
+      message: "Signin Successfully",
+      data: organizer,
+      token,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
 
 const getAllOrganizers = async(req,res)=>{
 

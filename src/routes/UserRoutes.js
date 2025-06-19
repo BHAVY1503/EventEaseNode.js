@@ -1,11 +1,28 @@
-const express = require("express")
-const routes = express.Router()
-const userController = require("../controllers/UserController")
+const express = require("express");
+const router = express.Router();
+const userController = require("../controllers/UserController");
+const { verifyToken, checkRole } = require("../middleware/auth");
 
-routes.post("/user",userController.signup)
-routes.get("/user", userController.getAllUsers)
-routes.get("/user/:id", userController.getUserById)
-routes.post("/user/login",userController.loginUser)
-routes.delete("/user/:id", userController.deleteUser)
+// Public routes
+router.post("/user", userController.signup);
+router.post("/user/login", userController.loginUser);
 
-module.exports = routes
+// Protected routes (example: only allow authenticated users)
+router.get("/user", verifyToken, userController.getAllUsers);
+router.get("/user/:id", verifyToken, userController.getUserById);
+router.delete("/user/:id", verifyToken, userController.deleteUser);
+
+module.exports = router;
+
+
+// const express = require("express")
+// const routes = express.Router()
+// const userController = require("../controllers/UserController")
+
+// routes.post("/user",userController.signup)
+// routes.get("/user", userController.getAllUsers)
+// routes.get("/user/:id", userController.getUserById)
+// routes.post("/user/login",userController.loginUser)
+// routes.delete("/user/:id", userController.deleteUser)
+
+// module.exports = routes
