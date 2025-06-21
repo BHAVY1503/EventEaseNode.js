@@ -2,7 +2,15 @@ const ticketModel = require("../models/TicketModal");
 
 const getTicketsByOrganizer = async (req, res) => {
   try {
-    const rawTickets = await ticketModel.find({ organizerId: req.params.organizerId })
+
+    //  Ensure organizer is only accessing their own data
+    // if (req.user._id !== req.params.organizerId) {
+    //   return res.status(403).json({ message: "Unauthorized: You can only access your own tickets." });
+    // }
+   const organizerId = req.user._id
+  
+
+    const rawTickets = await ticketModel.find({ organizerId: organizerId })
        .populate("eventId")       // Fetch event name
       .populate("userId") // Optional: show who booked it
       .populate("stateId", "Name")       // State name
@@ -26,7 +34,14 @@ const getTicketsByOrganizer = async (req, res) => {
 
 const getTicketsByUser = async (req, res) => {
   try {
-    const tickets = await ticketModel.find({ userId: req.params.userId })
+
+  //   if (req.user._id !== req.params.userId) {
+  //   return res.status(403).json({ message: "You can only access your own tickets" });
+  // }
+
+  const userId = req.user._id
+
+    const tickets = await ticketModel.find({ userId: userId })
       .populate("eventId", "eventName startDate")
       .populate("organizerId", "name")
       .populate("stateId", "Name")

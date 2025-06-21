@@ -79,7 +79,7 @@ const organizerSignin = async (req, res) => {
     }
 
     const token = jwt.sign(
-      { id: organizer._id, role: organizer.roleId.name },
+      { _id: organizer._id, role: organizer.roleId.name },
       SECRET_KEY,
       { expiresIn: "1d" }
     );
@@ -147,11 +147,28 @@ const deleteOrganizer = async(req,res)=>{
     })
 }
 
+const getOrganizerSelf = async (req, res) => {
+  try {
+    const organizer = await organizerModel.findById(req.user._id);
+    if (!organizer) {
+      return res.status(404).json({ message: "Organizer not found" });
+    }
+    res.status(200).json({
+      message: "Organizer retrieved successfully",
+      data: organizer,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+
 module.exports = {
     organizerRegister,
     getAllOrganizers,
     getOrganizerById,
     updateOrganizer,
     organizerSignin,
-    deleteOrganizer
+    deleteOrganizer,
+    getOrganizerSelf
 }

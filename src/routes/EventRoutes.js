@@ -2,6 +2,7 @@ const express = require("express")
 const routes = express.Router()
 const eventController = require("../controllers/EventsController")
 const multer = require("multer");
+const { verifyToken, checkRole} = require("../middleware/auth")
 
 // multer config
 const storage = multer.diskStorage({
@@ -12,15 +13,21 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
-routes.post("/addeventwithfile", upload.single("image"), eventController.addEventWithFile)
+//public routes (accessible for everyone)
 routes.get("/getallevents",eventController.getAllEvents)
-routes.put("/updateevent/:id",upload.single("image"), eventController.updateEvent)
-routes.delete("/deleteevent/:id",eventController.deleteEvent)
-routes.get("/geteventbyorganizerid/:organizerId",eventController.getEventByUserId)
 routes.get("/geteventbyid/:id",eventController.getEventById)
+
+
+//Protected routes (authentication required)
+routes.post("/addeventwithfile",verifyToken,checkRole(["Organizer"]), upload.single("image"), eventController.addEventWithFile)
+routes.put("/updateevent/:id",verifyToken,checkRole(["Organizer"]),upload.single("image"), eventController.updateEvent)
+routes.delete("/deleteevent/:id",verifyToken,checkRole(["Organizer"]),eventController.deleteEvent)
+routes.get("/geteventbyorganizerid",verifyToken,checkRole(["Organizer"]),eventController.getEventByOrganizerId)
+routes.post("/bookseat/:id",verifyToken,checkRole(["User","Organizer"]), eventController.bookSeat);
+
+
 routes.get("/stats", eventController.getStats); 
 routes.get("/geteventstats", eventController.getEventStats); //for total events and active events
-routes.post("/bookseat/:id", eventController.bookSeat);
 routes.get("/tickets/:userId", eventController.getTicketsByUser);
 routes.get("/getticketsbyuser/:userId",eventController.getTicketsByUser);
 

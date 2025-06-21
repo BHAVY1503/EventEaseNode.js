@@ -9,8 +9,9 @@ router.post("/user/login", userController.loginUser);
 
 // Protected routes (example: only allow authenticated users)
 router.get("/user", verifyToken, userController.getAllUsers);
-router.get("/user/:id", verifyToken, userController.getUserById);
 router.delete("/user/:id", verifyToken, userController.deleteUser);
+router.get("/user/getuserbytoken", verifyToken, userController.getUserByToken);
+router.get("/user/:id", verifyToken, userController.getUserById);
 
 module.exports = router;
 

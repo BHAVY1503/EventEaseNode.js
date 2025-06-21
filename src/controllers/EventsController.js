@@ -26,6 +26,17 @@ const addEventWithFile = async (req, res) => {
 
     const cloudinaryResponse = await cloudinaryUtil.uploadFileToCloudinary(req.file);
     req.body.eventImgUrl = cloudinaryResponse.secure_url;
+ 
+    //convert let/lng to Number
+    if (req.body.latitude) {
+      req.body.latitude = parseFloat(req.body.latitude);
+    }
+    if (req.body.longitude) {
+      req.body.longitude = parseFloat(req.body.longitude);
+    }
+    
+      // Secure: take organizer ID from logged-in user
+    req.body.organizerId = req.user._id;  //req.user._if from jwttoken
 
     const savedEvent = await eventModel.create(req.body);
 
@@ -114,11 +125,25 @@ const getAllEvents = async (req, res) => {
     
 // }
 
+
 const updateEvent = async (req, res) => {
   try {
+    const eventId = req.params.id;
+     const organizerId = req.user._id
+    // Step 1: Find the existing event
+    const existingEvent = await eventModel.findById(eventId);
+    if (!existingEvent) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    // Step 2: Verify the organizer owns this event
+    if (existingEvent.organizerId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: "Unauthorized: You cannot edit this event" });
+    }
+
+    // Step 3: Prepare updated data
     const updateData = { ...req.body };
 
-    // Convert dates
     if (updateData.startDate) {
       updateData.startDate = new Date(updateData.startDate);
     }
@@ -126,25 +151,62 @@ const updateEvent = async (req, res) => {
       updateData.endDate = new Date(updateData.endDate);
     }
 
-    //  If a new image is uploaded
+    // Step 4: Handle new image upload
     if (req.file) {
       const cloudinaryResponse = await cloudinaryUtil.uploadFileToCloudinary(req.file);
-      updateData.eventImgUrl = cloudinaryResponse.secure_url; 
+      updateData.eventImgUrl = cloudinaryResponse.secure_url;
     }
 
-    const updatedEvent = await eventModel.findByIdAndUpdate(req.params.id, updateData, { new: true });
+    // Step 5: Perform update
+    const updatedEvent = await eventModel.findByIdAndUpdate(eventId, updateData, { new: true });
 
-    res.status(200).json({
+    return res.status(200).json({
       message: "Event updated successfully",
       data: updatedEvent,
     });
   } catch (err) {
-    res.status(500).json({
+    console.error("Update Event Error:", err);
+    return res.status(500).json({
       message: "Error while updating event",
       error: err.message,
     });
   }
 };
+
+module.exports = { updateEvent };
+
+
+// const updateEvent = async (req, res) => {
+//   try {
+//     const updateData = { ...req.body };
+
+//     // Convert dates
+//     if (updateData.startDate) {
+//       updateData.startDate = new Date(updateData.startDate);
+//     }
+//     if (updateData.endDate) {
+//       updateData.endDate = new Date(updateData.endDate);
+//     }
+
+//     //  If a new image is uploaded
+//     if (req.file) {
+//       const cloudinaryResponse = await cloudinaryUtil.uploadFileToCloudinary(req.file);
+//       updateData.eventImgUrl = cloudinaryResponse.secure_url; 
+//     }
+
+//     const updatedEvent = await eventModel.findByIdAndUpdate(req.params.id, updateData, { new: true });
+
+//     res.status(200).json({
+//       message: "Event updated successfully",
+//       data: updatedEvent,
+//     });
+//   } catch (err) {
+//     res.status(500).json({
+//       message: "Error while updating event",
+//       error: err.message,
+//     });
+//   }
+// };
 
 // const updateEvent = async(req,res)=>{
 
@@ -163,21 +225,44 @@ const updateEvent = async (req, res) => {
 //     }
 // }
 
-const deleteEvent = async(req,res)=>{
+const deleteEvent = async (req, res) => {
+  try {
+    const eventId = req.params.id;
+    const organizerId = req.user._id;
 
-    const deleteEvent = await eventModel.findByIdAndDelete(req.params.id)
+    // Step 1: Find the event
+    const event = await eventModel.findById(eventId);
 
-    res.json({
-        message:"Event Deleted..",
-        data:deleteEvent
-    })
-}
+    if (!event) {
+      return res.status(404).json({ message: "Event not found" });
+    }
 
-const getEventByUserId = async (req, res) => {
+    // Step 2: Check if this organizer owns the event
+    if (event.organizerId.toString() !== organizerId.toString()) {
+      return res.status(403).json({ message: "Unauthorized: You can't delete this event" });
+    }
+
+    // Step 3: Delete the event
+    const deletedEvent = await eventModel.findByIdAndDelete(eventId);
+
+    return res.status(200).json({
+      message: "Event deleted successfully",
+      data: deletedEvent,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      message: "Error while deleting event",
+      error: err.message,
+    });
+  }
+};
+
+
+const getEventByOrganizerId = async (req, res) => {
   // const { userId } = req.params;
   try {
     const allevent = await eventModel
-      .find({ organizerId:req.params.organizerId }) //here userid is a organizer
+      .find({ organizerId:req.user._id }) //here userid is a organizer
       .populate("stateId", "Name") 
       .populate("cityId", "name")
       .populate("organizerId", "name")
@@ -262,39 +347,100 @@ const getEventStats = async (req, res) => {
 const bookSeat = async (req, res) => {
   try {
     const eventId = req.params.id;
-    const { userId, stateId, cityId, quantity = 1 } = req.body;
+    const { stateId, cityId, quantity = 1 } = req.body;
+
+    // ✅ Ensure the logged-in user is booking for themselves
+    // if (req.user._id !== userId) {
+    //   return res.status(403).json({ message: "You can only book for your own account." });
+    // }
+
+   const userId = req.user._id;
 
     const event = await eventModel.findById(eventId);
     if (!event) return res.status(404).json({ message: "Event not found" });
 
-    const availableSeats = event.numberOfSeats - event.bookedSeats; //if user request more seats then available 
-    if (availableSeats < quantity) {
-      return res.status(400).json({ message: `Only ${availableSeats} seats left` });
+    const availableSeats = event.numberOfSeats - event.bookedSeats;
+
+    // ✅ Prevent negative or overbooking
+    if (availableSeats <= 0) {
+      return res.status(400).json({ message: "Event is sold out" });
     }
 
+    if (availableSeats < quantity) {
+      return res.status(400).json({ message: `Only ${availableSeats} seat(s) left` });
+    }
+
+    // ✅ Update seat count safely
     event.bookedSeats += quantity;
+    if (event.bookedSeats > event.numberOfSeats) {
+      return res.status(400).json({ message: "Cannot exceed total seat capacity" });
+    }
+
     await event.save();
- 
-    //create a new record in ticketmodel with all booking details
+
+    // ✅ Create ticket record
     const ticket = await ticketModel.create({
       eventId,
-      userId,
+      userId: req.user._id,
       stateId,
       cityId,
       organizerId: event.organizerId,
       quantity,
     });
 
-
     res.status(200).json({
       message: "Seat(s) booked successfully",
       data: { ticket, event },
     });
+
   } catch (err) {
     console.error("Error booking seat:", err);
     res.status(500).json({ message: "Internal Server Error", error: err.message });
   }
 };
+
+
+// const bookSeat = async (req, res) => {
+//   try {
+//     const eventId = req.params.id;
+//     const { userId, stateId, cityId, quantity = 1 } = req.body;
+    
+//       // Ensure the logged-in user is booking for themselves
+//     if (req.user._id !== userId) {
+//       return res.status(403).json({ message: "You can only book for your own account." });
+//     }
+
+//     const event = await eventModel.findById(eventId);
+//     if (!event) return res.status(404).json({ message: "Event not found" });
+
+//     const availableSeats = event.numberOfSeats - event.bookedSeats; //if user request more seats then available 
+//     if (availableSeats < quantity) {
+//       return res.status(400).json({ message: `Only ${availableSeats} seats left` });
+//     }
+
+//     event.bookedSeats += quantity;
+//     await event.save();
+ 
+//     //create a new record in ticketmodel with all booking details
+//     const ticket = await ticketModel.create({
+//       eventId,
+//       userId: req.user._id, 
+//       stateId,
+//       cityId,
+//       organizerId: event.organizerId,
+//       quantity,
+//     });
+
+
+//     res.status(200).json({
+//       message: "Seat(s) booked successfully",
+//       data: { ticket, event },
+//     });
+//   } catch (err) {
+//     console.error("Error booking seat:", err);
+//     res.status(500).json({ message: "Internal Server Error", error: err.message });
+//   }
+// };
 
 
 
@@ -320,7 +466,7 @@ module.exports = {
     getAllEvents,
     updateEvent,
     deleteEvent,
-    getEventByUserId,
+    getEventByOrganizerId,
     getEventById,
     getStats,
     getEventStats,

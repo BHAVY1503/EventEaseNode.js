@@ -15,7 +15,7 @@ app.use(userRoutes)
 
 //organizer
 const organizerRoutes = require("./src/routes/OrganizerRoutes")
-app.use(organizerRoutes)
+app.use("/organizer",organizerRoutes)
 
 //events
 const eventRoutes = require("./src/routes/EventRoutes")
@@ -36,6 +36,10 @@ app.use("/tickets",ticketRoutes);
 //feedback
 const feedBackRoutes = require("./src/routes/FeedBackRoutes");
 app.use(feedBackRoutes);
+
+//contactus
+const contactusRoutes = require("./src/routes/ContactUsRoutes")
+app.use(contactusRoutes)
 
 mongoose.connect("mongodb://127.0.0.1:27017/EventEase").then(()=>{
     console.log("database connected....")

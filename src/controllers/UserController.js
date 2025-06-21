@@ -16,7 +16,7 @@ const loginUser = async (req, res) => {
       return res.status(401).json({ message: "Invalid credentials" });
 
     const token = jwt.sign(
-      { id: foundUser._id, role: foundUser.roleId?.name },
+      { _id: foundUser._id, role: foundUser.roleId?.name },
       SECRET_KEY,
       { expiresIn: "1h" }
     );
@@ -122,12 +122,40 @@ const deleteUser = async(req,res)=>{
   })
 }
 
+const getUserByToken = async (req, res) => {
+  try {
+    // `req.user` is added by your `verifyToken` middleware
+    const userId = req.user._id;
+
+    const user = await userModel.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
+        data: null,
+      });
+    }
+
+    res.status(200).json({
+      message: "User found successfully",
+      data: user,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      message: "Error fetching user",
+      data: err.message,
+    });
+  }
+};
+
+
  
 module.exports = {
     signup,
     getAllUsers,
     getUserById,
     loginUser,
-    deleteUser
+    deleteUser, 
+    getUserByToken
 
  }
