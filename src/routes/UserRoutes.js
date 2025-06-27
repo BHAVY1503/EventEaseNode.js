@@ -6,10 +6,12 @@ const { verifyToken, checkRole } = require("../middleware/auth");
 // Public routes
 router.post("/user", userController.signup);
 router.post("/user/login", userController.loginUser);
+router.post("/user/googlelogin",userController.googleLogin);
+
 
 // Protected routes (example: only allow authenticated users)
-router.get("/user", verifyToken, userController.getAllUsers);
-router.delete("/user/:id", verifyToken, userController.deleteUser);
+router.get("/user", verifyToken,checkRole(["Admin"]), userController.getAllUsers);
+router.delete("/deleteuser/:id", verifyToken,checkRole(["Admin"]), userController.deleteUser);
 router.get("/user/getuserbytoken", verifyToken, userController.getUserByToken);
 router.get("/user/:id", verifyToken, userController.getUserById);
 

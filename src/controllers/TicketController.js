@@ -60,7 +60,23 @@ const getTicketsByUser = async (req, res) => {
 };
 
 
+const getAllTicketsGroupedByEvent = async (req, res) => {
+  try {
+    const tickets = await ticketModel.find()
+      .populate("eventId")
+      .populate("userId")
+      .populate("stateId")
+      .populate("cityId");
+
+    res.status(200).json({ success: true, data: tickets });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Failed to fetch tickets", error });
+  }
+};
+
+
 module.exports = {
   getTicketsByOrganizer,
-  getTicketsByUser
+  getTicketsByUser,
+  getAllTicketsGroupedByEvent
 };

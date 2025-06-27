@@ -361,7 +361,7 @@ const bookSeat = async (req, res) => {
 
     const availableSeats = event.numberOfSeats - event.bookedSeats;
 
-    // ✅ Prevent negative or overbooking
+    // Prevent negative or overbooking
     if (availableSeats <= 0) {
       return res.status(400).json({ message: "Event is sold out" });
     }
@@ -370,7 +370,7 @@ const bookSeat = async (req, res) => {
       return res.status(400).json({ message: `Only ${availableSeats} seat(s) left` });
     }
 
-    // ✅ Update seat count safely
+    //  Update seat count safely
     event.bookedSeats += quantity;
     if (event.bookedSeats > event.numberOfSeats) {
       return res.status(400).json({ message: "Cannot exceed total seat capacity" });
@@ -378,7 +378,7 @@ const bookSeat = async (req, res) => {
 
     await event.save();
 
-    // ✅ Create ticket record
+    //  Create ticket record
     const ticket = await ticketModel.create({
       eventId,
       userId: req.user._id,
@@ -459,6 +459,45 @@ const getTicketsByUser = async (req, res) => {
  
 
 
+const getEventsGroupedByOrganizer = async (req, res) => {
+  try {
+    const groupedEvents = await eventModel.aggregate([
+      {
+        $group: {
+          _id: "$organizerId",
+          events: { $push: "$$ROOT" }, // push entire event document
+        },
+      },
+      {
+        $lookup: {
+          from: "organizers", // collection name
+          localField: "_id",
+          foreignField: "_id",
+          as: "organizerInfo",
+        },
+      },
+      {
+        $unwind: "$organizerInfo"
+      },
+      {
+        $project: {
+          organizerName: "$organizerInfo.name",
+          organizerEmail: "$organizerInfo.email",
+          events: 1
+        }
+      }
+    ]);
+
+    res.status(200).json({ success: true, data: groupedEvents });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Failed to group events", error });
+  }
+};
+
+
+
+
+
 
 
 module.exports = {
@@ -472,5 +511,6 @@ module.exports = {
     getEventStats,
     bookSeat,
     getTicketsByUser,
+    getEventsGroupedByOrganizer
     
 }

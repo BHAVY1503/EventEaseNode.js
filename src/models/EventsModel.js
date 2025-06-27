@@ -51,6 +51,10 @@ const eventsSchema = new Schema({
   type: Number,
   default: 0
 },
+selectedSeats:{
+    type:[String],
+    default:[]
+},
 location:{
     type:String,
     default:""
@@ -63,6 +67,12 @@ location:{
     type: Number,
     required: false,
   },
+  eventCategory: {
+  type: String,
+  enum: ["Indoor", "Outdoor","ZoomMeeting"],
+  required: true,
+},
+seatLayout: [String],
 
     // rating: {
     // type: Number,

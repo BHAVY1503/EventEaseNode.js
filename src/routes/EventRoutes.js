@@ -1,7 +1,7 @@
 const express = require("express")
 const routes = express.Router()
 const eventController = require("../controllers/EventsController")
-const multer = require("multer");
+const multer = require("multer")
 const { verifyToken, checkRole} = require("../middleware/auth")
 
 // multer config
@@ -19,11 +19,12 @@ routes.get("/geteventbyid/:id",eventController.getEventById)
 
 
 //Protected routes (authentication required)
-routes.post("/addeventwithfile",verifyToken,checkRole(["Organizer"]), upload.single("image"), eventController.addEventWithFile)
-routes.put("/updateevent/:id",verifyToken,checkRole(["Organizer"]),upload.single("image"), eventController.updateEvent)
-routes.delete("/deleteevent/:id",verifyToken,checkRole(["Organizer"]),eventController.deleteEvent)
+routes.post("/addeventwithfile",verifyToken,checkRole(["Organizer","Admin"]), upload.single("image"), eventController.addEventWithFile)
+routes.put("/updateevent/:id",verifyToken,checkRole(["Organizer", "Admin"]),upload.single("image"), eventController.updateEvent)
+routes.delete("/deleteevent/:id",verifyToken,checkRole(["Organizer", "Admin"]),eventController.deleteEvent)
 routes.get("/geteventbyorganizerid",verifyToken,checkRole(["Organizer"]),eventController.getEventByOrganizerId)
 routes.post("/bookseat/:id",verifyToken,checkRole(["User","Organizer"]), eventController.bookSeat);
+routes.get("/groupedeventsbyorganizer",verifyToken,checkRole(["Admin"]),eventController.getEventsGroupedByOrganizer)
 
 
 routes.get("/stats", eventController.getStats); 

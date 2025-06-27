@@ -1,8 +1,51 @@
 const organizerModel = require("../models/OrganizerModel")
+const roleModel = require("../models/RoleModels")
 const bcrypt = require("bcryptjs")
 const jwt = require("jsonwebtoken");
 const SECRET_KEY = "secret";
+const { OAuth2Client } = require("google-auth-library"); 
 
+const client = new OAuth2Client("342037145091-qvhlig4d6tn8p35ho40kc8c468mpnqug.apps.googleusercontent.com")
+ 
+const googleLogin = async (req, res) => {
+  const { token } = req.body;
+
+  try {
+    const ticket = await client.verifyIdToken({
+      idToken: token,
+      audience: "342037145091-qvhlig4d6tn8p35ho40kc8c468mpnqug.apps.googleusercontent.com",
+    });
+
+    const payload = ticket.getPayload();
+    const { email, name } = payload;
+
+    let organizer = await organizerModel.findOne({ email }).populate("roleId");
+
+    if (!organizer) {
+      // If not exists, register a new user with default "User" role
+      const organizerRole = await roleModel.findOne({ name: "Organizer" });
+     if (!organizerRole) return res.status(500).json({ message: "Organizer role not found" });
+
+      organizer = await organizerModel.create({
+        email,
+        name,
+        password: "google-oauth", // dummy password
+        roleId: organizerRole._id // 
+      });
+    }
+
+    const jwtToken = jwt.sign(
+      { _id: organizer._id, role: organizer.roleId?.name },
+      SECRET_KEY,
+      { expiresIn: "1h" }
+    );
+
+    res.status(200).json({ token: jwtToken, data: organizer });
+  } catch (err) {
+    console.error("Google Login Error:", err);
+    res.status(401).json({ message: "Invalid Google Token" });
+  }
+};
 
 
 const organizerRegister = async(req,res)=>{
@@ -77,7 +120,7 @@ const organizerSignin = async (req, res) => {
     if (!isMatch) {
       return res.status(401).json({ message: "Invalid credentials." });
     }
-
+    //create jwt token containing userId and role
     const token = jwt.sign(
       { _id: organizer._id, role: organizer.roleId.name },
       SECRET_KEY,
@@ -97,7 +140,7 @@ const organizerSignin = async (req, res) => {
 
 const getAllOrganizers = async(req,res)=>{
 
-    const organizer = await organizerModel.find().populate("role")
+    const organizer = await organizerModel.find().select("-password").populate("roleId")
 
     res.json({
         message:"organizers are find",
@@ -138,14 +181,27 @@ const updateOrganizer = async(req,res)=>{
 }
 
 const deleteOrganizer = async(req,res)=>{
+ 
+   try {
+      const organizer = await organizerModel.findByIdAndDelete(req.params.id);
+  
+      if (!organizer) {
+        return res.status(404).json({ message: "Organizer not found" });
+      }
+  
+      res.json({
+        message: "Organizer deleted successfully",
+        data: organizer
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: "Error deleting Organizer",
+        error: error.message
+      });
+    }
+  };
+   
 
-    const organizer = await organizerModel.findByIdAndDelete(req.params.id)
-
-    res.json({
-        message:"Organizer Deleted...",
-        data:organizer
-    })
-}
 
 const getOrganizerSelf = async (req, res) => {
   try {
@@ -170,5 +226,6 @@ module.exports = {
     updateOrganizer,
     organizerSignin,
     deleteOrganizer,
-    getOrganizerSelf
+    getOrganizerSelf,
+    googleLogin
 }

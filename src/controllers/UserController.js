@@ -1,9 +1,53 @@
 // const UserModel = require("../models/UserModel");
 const userModel = require("../models/UserModel")
+const roleModel = require("../models/RoleModels")
 const bcrypt = require("bcrypt")
 const jwt = require("jsonwebtoken")
 const SECRET_KEY = "secret"
+const { OAuth2Client } = require("google-auth-library"); 
+
+const client = new OAuth2Client("342037145091-qvhlig4d6tn8p35ho40kc8c468mpnqug.apps.googleusercontent.com")
  
+const googleLogin = async (req, res) => {
+  const { token } = req.body;
+
+  try {
+    const ticket = await client.verifyIdToken({
+      idToken: token,
+      audience: "342037145091-qvhlig4d6tn8p35ho40kc8c468mpnqug.apps.googleusercontent.com",
+    });
+
+    const payload = ticket.getPayload();
+    const { email, name } = payload;
+
+    let user = await userModel.findOne({ email }).populate("roleId");
+
+    if (!user) {
+      // If not exists, register a new user with default "User" role
+      const userRole = await roleModel.findOne({ name: "User" });
+     if (!userRole) return res.status(500).json({ message: "User role not found" });
+
+      user = await userModel.create({
+        email,
+        fullName:name,
+        password: "google-oauth", // dummy password
+        roleId: userRole._id // 
+      });
+    }
+
+    const jwtToken = jwt.sign(
+      { _id: user._id, role: user.roleId?.name },
+      SECRET_KEY,
+      { expiresIn: "1h" }
+    );
+
+    res.status(200).json({ token: jwtToken, data: user });
+  } catch (err) {
+    console.error("Google Login Error:", err);
+    res.status(401).json({ message: "Invalid Google Token" });
+  }
+};
+
 const loginUser = async (req, res) => {
   const { email, password } = req.body;
 
@@ -81,7 +125,7 @@ const signup = async(req,res)=>{
 
 const getAllUsers = async(req,res)=>{
     
-    const allUser = await userModel.find().populate("role")
+    const allUser = await userModel.find().select("-password").populate("roleId")
 
     res.json({
         message:"user find",
@@ -112,15 +156,26 @@ const getUserById = async (req, res) => {
 };
 
 
-const deleteUser = async(req,res)=>{
+const deleteUser = async (req, res) => {
+  try {
+    const user = await userModel.findByIdAndDelete(req.params.id);
 
-  const user = await userModel.findByIdAndDelete(req.params.id)
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
-  res.json({
-    message:"User deleted",
-    data:user
-  })
-}
+    res.json({
+      message: "User deleted successfully",
+      data: user
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Error deleting user",
+      error: error.message
+    });
+  }
+};
+
 
 const getUserByToken = async (req, res) => {
   try {
@@ -156,6 +211,7 @@ module.exports = {
     getUserById,
     loginUser,
     deleteUser, 
-    getUserByToken
+    getUserByToken,
+    googleLogin
 
  }
