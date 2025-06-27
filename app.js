@@ -41,6 +41,10 @@ app.use(feedBackRoutes);
 const contactusRoutes = require("./src/routes/ContactUsRoutes")
 app.use(contactusRoutes)
 
+//stadium
+const stadiumRoutes= require("./src/routes/StadiumRoutes")
+app.use(stadiumRoutes)
+
 mongoose.connect("mongodb://127.0.0.1:27017/EventEase").then(()=>{
     console.log("database connected....")
 })

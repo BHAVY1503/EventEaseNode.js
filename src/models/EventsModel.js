@@ -58,7 +58,7 @@ selectedSeats:{
 location:{
     type:String,
     default:""
-},
+ },
  latitude: {
     type: Number,
     required: false,
@@ -71,14 +71,14 @@ location:{
   type: String,
   enum: ["Indoor", "Outdoor","ZoomMeeting"],
   required: true,
-},
-seatLayout: [String],
+ },
+ seatLayout: [String],
 
     // rating: {
     // type: Number,
     // min: 1,
     // max: 5,
-    // default: 0,
+    // default:0,
     // },
 
     

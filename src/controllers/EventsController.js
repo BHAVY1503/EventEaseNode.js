@@ -400,51 +400,6 @@ const bookSeat = async (req, res) => {
 };
 
 
-// const bookSeat = async (req, res) => {
-//   try {
-//     const eventId = req.params.id;
-//     const { userId, stateId, cityId, quantity = 1 } = req.body;
-    
-//       // Ensure the logged-in user is booking for themselves
-//     if (req.user._id !== userId) {
-//       return res.status(403).json({ message: "You can only book for your own account." });
-//     }
-
-//     const event = await eventModel.findById(eventId);
-//     if (!event) return res.status(404).json({ message: "Event not found" });
-
-//     const availableSeats = event.numberOfSeats - event.bookedSeats; //if user request more seats then available 
-//     if (availableSeats < quantity) {
-//       return res.status(400).json({ message: `Only ${availableSeats} seats left` });
-//     }
-
-//     event.bookedSeats += quantity;
-//     await event.save();
- 
-//     //create a new record in ticketmodel with all booking details
-//     const ticket = await ticketModel.create({
-//       eventId,
-//       userId: req.user._id, 
-//       stateId,
-//       cityId,
-//       organizerId: event.organizerId,
-//       quantity,
-//     });
-
-
-//     res.status(200).json({
-//       message: "Seat(s) booked successfully",
-//       data: { ticket, event },
-//     });
-//   } catch (err) {
-//     console.error("Error booking seat:", err);
-//     res.status(500).json({ message: "Internal Server Error", error: err.message });
-//   }
-// };
-
-
-
-
 const getTicketsByUser = async (req, res) => {
   try {
     const tickets = await ticketModel.find({ userId: req.params.userId }).populate('eventId').populate('userId', 'name email')
