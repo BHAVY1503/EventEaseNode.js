@@ -86,6 +86,7 @@ const getAllEvents = async (req, res) => {
       .populate("stateId")
       .populate("cityId")
       .populate("organizerId")
+      .populate("stadiumId")
 
     if (allEvents.length === 0) {
       return res.status(404).json({ message: "Events not found" });
@@ -266,6 +267,7 @@ const getEventByOrganizerId = async (req, res) => {
       .populate("stateId", "Name") 
       .populate("cityId", "name")
       .populate("organizerId", "name")
+      .populate("stadiumId")
     if (allevent.length === 0) {
       return res.status(404).json({ message: "No event found" });
     }
@@ -287,7 +289,7 @@ const getEventByOrganizerId = async (req, res) => {
 const getEventById = async(req,res)=>{
  
   try{
-    const event = await eventModel.findById(req.params.id)
+    const event = await eventModel.findById(req.params.id).populate("stadiumId")
     if(!event){
       res.status(404).json({
         message:"no event found.."
@@ -347,47 +349,57 @@ const getEventStats = async (req, res) => {
 const bookSeat = async (req, res) => {
   try {
     const eventId = req.params.id;
-    const { stateId, cityId, quantity = 1 } = req.body;
+    const { stateId, cityId, quantity = 1, selectedSeats = [], stadiumId } = req.body;
+    const userId = req.user._id;
 
-    // ✅ Ensure the logged-in user is booking for themselves
-    // if (req.user._id !== userId) {
-    //   return res.status(403).json({ message: "You can only book for your own account." });
-    // }
-
-   const userId = req.user._id;
-
+    // ✅ Step 1: Fetch event
     const event = await eventModel.findById(eventId);
     if (!event) return res.status(404).json({ message: "Event not found" });
 
-    const availableSeats = event.numberOfSeats - event.bookedSeats;
+    // ✅ Step 2: Ensure bookedSeatLabels is initialized
+    event.bookedSeatLabels = event.bookedSeatLabels || [];
 
-    // Prevent negative or overbooking
+    // ✅ Step 3: Check if any of the selected seats are already booked
+    const alreadyBooked = selectedSeats.some(seat =>
+      event.bookedSeatLabels.includes(seat)
+    );
+    if (alreadyBooked) {
+      return res.status(400).json({
+        message: "One or more selected seats are already booked.",
+      });
+    }
+
+    // ✅ Step 4: Check seat availability
+    const availableSeats = event.numberOfSeats - event.bookedSeats;
     if (availableSeats <= 0) {
       return res.status(400).json({ message: "Event is sold out" });
     }
-
     if (availableSeats < quantity) {
       return res.status(400).json({ message: `Only ${availableSeats} seat(s) left` });
     }
 
-    //  Update seat count safely
+    // ✅ Step 5: Update event seat counts
     event.bookedSeats += quantity;
+    event.bookedSeatLabels.push(...selectedSeats);
     if (event.bookedSeats > event.numberOfSeats) {
       return res.status(400).json({ message: "Cannot exceed total seat capacity" });
     }
 
     await event.save();
 
-    //  Create ticket record
+    // ✅ Step 6: Create ticket
     const ticket = await ticketModel.create({
       eventId,
-      userId: req.user._id,
+      userId,
       stateId,
       cityId,
+      selectedSeats,
+      stadiumId,
       organizerId: event.organizerId,
       quantity,
     });
 
+    // ✅ Step 7: Respond
     res.status(200).json({
       message: "Seat(s) booked successfully",
       data: { ticket, event },
@@ -398,6 +410,65 @@ const bookSeat = async (req, res) => {
     res.status(500).json({ message: "Internal Server Error", error: err.message });
   }
 };
+
+
+
+// const bookSeat = async (req, res) => {
+//   try {
+//     const eventId = req.params.id;
+//     const { stateId, cityId, quantity = 1, selectedSeats = [], stadiumId } = req.body;
+
+//     // ✅ Ensure the logged-in user is booking for themselves
+//     // if (req.user._id !== userId) {
+//     //   return res.status(403).json({ message: "You can only book for your own account." });
+//     // }
+
+//    const userId = req.user._id;
+
+//     const event = await eventModel.findById(eventId);
+//     if (!event) return res.status(404).json({ message: "Event not found" });
+
+//     const availableSeats = event.numberOfSeats - event.bookedSeats;
+
+//     // Prevent negative or overbooking
+//     if (availableSeats <= 0) {
+//       return res.status(400).json({ message: "Event is sold out" });
+//     }
+
+//     if (availableSeats < quantity) {
+//       return res.status(400).json({ message: `Only ${availableSeats} seat(s) left` });
+//     }
+
+//     //  Update seat count safely
+//     event.bookedSeats += quantity;
+//     if (event.bookedSeats > event.numberOfSeats) {
+//       return res.status(400).json({ message: "Cannot exceed total seat capacity" });
+//     }
+
+//     await event.save();
+
+//     //  Create ticket record
+//     const ticket = await ticketModel.create({
+//       eventId,
+//       userId: req.user._id,
+//       stateId,
+//       cityId,
+//       selectedSeats,
+//       stadiumId,
+//       organizerId: event.organizerId,
+//       quantity,
+//     });
+
+//     res.status(200).json({
+//       message: "Seat(s) booked successfully",
+//       data: { ticket, event },
+//     });
+
+//   } catch (err) {
+//     console.error("Error booking seat:", err);
+//     res.status(500).json({ message: "Internal Server Error", error: err.message });
+//   }
+// };
 
 
 const getTicketsByUser = async (req, res) => {

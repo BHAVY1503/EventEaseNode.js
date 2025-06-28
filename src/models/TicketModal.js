@@ -28,7 +28,11 @@ const ticketSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now
-  }
+  },
+  selectedSeats: {
+  type: [String],
+  default: [],
+},
 });
 
 module.exports = mongoose.model("ticket", ticketSchema);

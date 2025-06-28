@@ -32,12 +32,12 @@ const eventsSchema = new Schema({
     stateId:{
         type:Schema.Types.ObjectId,
         ref:"state",
-        required:true
+        // required:true
     },
     cityId:{
         type:Schema.Types.ObjectId,
         ref:"city",
-        required:true
+        // required:true
     },
     organizerId:{
         type:Schema.Types.ObjectId,
@@ -72,6 +72,15 @@ location:{
   enum: ["Indoor", "Outdoor","ZoomMeeting"],
   required: true,
  },
+ stadiumId: {
+  type: Schema.Types.ObjectId,
+  ref: "Stadium",
+},
+bookedSeatLabels: {
+  type: [String],
+  default: [],
+},
+
  seatLayout: [String],
 
     // rating: {
