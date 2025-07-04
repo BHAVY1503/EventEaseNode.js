@@ -11,7 +11,7 @@ const client = new OAuth2Client("342037145091-qvhlig4d6tn8p35ho40kc8c468mpnqug.a
 const googleLogin = async (req, res) => {
   const { token } = req.body;
 
-  try {
+  try{
     const ticket = await client.verifyIdToken({
       idToken: token,
       audience: "342037145091-qvhlig4d6tn8p35ho40kc8c468mpnqug.apps.googleusercontent.com",

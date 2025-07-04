@@ -29,6 +29,10 @@ const eventsSchema = new Schema({
         type:Date,
         required:true
     },
+    ticketRate:{
+       type:Number,
+       default:"0"
+    },
     stateId:{
         type:Schema.Types.ObjectId,
         ref:"state",
@@ -80,6 +84,17 @@ bookedSeatLabels: {
   type: [String],
   default: [],
 },
+zonePrices: {
+  type: [Number], // or type: [ { type: Number } ]
+  default: []     // optional, fallback to stadium default if not set
+},
+customZones: [
+  {
+    zoneName: String,
+    seatLabels: [String],
+    price: Number,
+  }
+],
 
  seatLayout: [String],
 
