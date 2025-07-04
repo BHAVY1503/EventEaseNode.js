@@ -1,5 +1,6 @@
 const eventModel = require("../models/EventsModel")
 const ticketModel = require("../models/TicketModal")
+const stadiumModel = require("../models/StadiumModel")
 // const userModel = require("../models/UserModel")
 const multer = require("multer") //for uploading files
 const path = require("path")
@@ -26,17 +27,54 @@ const addEventWithFile = async (req, res) => {
 
     const cloudinaryResponse = await cloudinaryUtil.uploadFileToCloudinary(req.file);
     req.body.eventImgUrl = cloudinaryResponse.secure_url;
- 
-    //convert let/lng to Number
-    if (req.body.latitude) {
-      req.body.latitude = parseFloat(req.body.latitude);
+
+    // Convert lat/lng
+    if (req.body.latitude) req.body.latitude = parseFloat(req.body.latitude);
+    if (req.body.longitude) req.body.longitude = parseFloat(req.body.longitude);
+
+    // Organizer from token
+    req.body.organizerId = req.user._id;
+
+    // ✅ Handle zonePrices override for Indoor events
+   if (req.body.eventCategory === "Indoor" && req.body.zonePrices) {
+  try {
+    let zonePrices = [];
+
+    if (typeof req.body.zonePrices === "string") {
+      zonePrices = JSON.parse(req.body.zonePrices);
+    } else if (Array.isArray(req.body.zonePrices)) {
+      zonePrices = req.body.zonePrices;
     }
-    if (req.body.longitude) {
-      req.body.longitude = parseFloat(req.body.longitude);
-    }
-    
-      // Secure: take organizer ID from logged-in user
-    req.body.organizerId = req.user._id;  //req.user._if from jwttoken
+
+    // Convert to valid numbers
+    zonePrices = zonePrices.map((p) => {
+      const num = Number(p);
+      return isNaN(num) ? null : num;
+    });
+
+    // Fetch stadium
+    const stadium = await stadiumModel.findById(req.body.stadiumId);
+    if (!stadium) return res.status(404).json({ message: "Stadium not found" });
+
+    const updatedZones = stadium.zones.map((zone, index) => {
+      const fallback = zone.price;
+      const override = zonePrices[index];
+
+      return {
+        zoneName: `Zone ${String.fromCharCode(65 + index)}`, // A, B, C...
+        seatLabels: zone.seatLabels,
+        price: typeof override === "number" ? override : fallback
+      };
+    });
+
+    req.body.zonePrices = updatedZones.map((z) => z.price);   // To store simple prices
+    req.body.customZones = updatedZones;                      // To store full zone info
+
+  } catch (err) {
+    console.error("Invalid zonePrices format", err);
+    return res.status(400).json({ message: "Invalid zonePrices format" });
+  }
+}
 
     const savedEvent = await eventModel.create(req.body);
 
@@ -44,12 +82,54 @@ const addEventWithFile = async (req, res) => {
       message: "Event added successfully",
       data: savedEvent,
     });
-
   } catch (err) {
     console.error("Error uploading event:", err);
     res.status(500).json({ message: err.message });
   }
 };
+
+
+// const addEventWithFile = async (req, res) => {
+//   try {
+//     if (!req.file) {
+//       return res.status(400).json({ message: "No image file uploaded" });
+//     }
+
+//     const cloudinaryResponse = await cloudinaryUtil.uploadFileToCloudinary(req.file);
+//     req.body.eventImgUrl = cloudinaryResponse.secure_url;
+ 
+//     //convert let/lng to Number
+//     if (req.body.latitude) {
+//       req.body.latitude = parseFloat(req.body.latitude);
+//     }
+//     if (req.body.longitude) {
+//       req.body.longitude = parseFloat(req.body.longitude);
+//     }
+
+//       // Parse zonePrices if provided
+//     if (req.body.zonePrices) {
+//       try {
+//         req.body.zonePrices = JSON.parse(req.body.zonePrices);
+//       } catch (err) {
+//         return res.status(400).json({ message: "Invalid zonePrices format" });
+//       }
+//     }
+    
+//       // Secure: take organizer ID from logged-in user
+//     req.body.organizerId = req.user._id;  //req.user._if from jwttoken
+
+//     const savedEvent = await eventModel.create(req.body);
+
+//     res.status(200).json({
+//       message: "Event added successfully",
+//       data: savedEvent,
+//     });
+
+//   } catch (err) {
+//     console.error("Error uploading event:", err);
+//     res.status(500).json({ message: err.message });
+//   }
+// };
 
 
 // const addEventWithFile = async(req,res)=>{
