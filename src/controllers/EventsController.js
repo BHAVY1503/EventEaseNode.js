@@ -185,27 +185,6 @@ const getAllEvents = async (req, res) => {
   }
 };
 
-// const getAllEvents = async(req,res)=>{
-//    try{
-//     const allEvents = await eventModel.find().populate("stateId cityId organizerId")
-//     if(allEvents.length === 0){
-//         res.status(404).json({
-//             message:"Events not found.. ",
-//         })
-//     }else{
-//       res.status(200).json({
-//         message:"Events found successfully",
-//         data:allEvents
-//       })
-//     }
-//    }catch(err){
-//     res.status(500).json({
-//         message:err.message
-//     })
-//    }
-    
-// }
-
 
 const updateEvent = async (req, res) => {
   try {
@@ -256,55 +235,6 @@ const updateEvent = async (req, res) => {
 
 module.exports = { updateEvent };
 
-
-// const updateEvent = async (req, res) => {
-//   try {
-//     const updateData = { ...req.body };
-
-//     // Convert dates
-//     if (updateData.startDate) {
-//       updateData.startDate = new Date(updateData.startDate);
-//     }
-//     if (updateData.endDate) {
-//       updateData.endDate = new Date(updateData.endDate);
-//     }
-
-//     //  If a new image is uploaded
-//     if (req.file) {
-//       const cloudinaryResponse = await cloudinaryUtil.uploadFileToCloudinary(req.file);
-//       updateData.eventImgUrl = cloudinaryResponse.secure_url; 
-//     }
-
-//     const updatedEvent = await eventModel.findByIdAndUpdate(req.params.id, updateData, { new: true });
-
-//     res.status(200).json({
-//       message: "Event updated successfully",
-//       data: updatedEvent,
-//     });
-//   } catch (err) {
-//     res.status(500).json({
-//       message: "Error while updating event",
-//       error: err.message,
-//     });
-//   }
-// };
-
-// const updateEvent = async(req,res)=>{
-
-//     try{
-//         const updateEvent = await eventModel.findByIdAndUpdate(req.params.id, req.body, {new:true})
-
-//         res.status(200).json({
-//             message:"Event updated Successfully",
-//             data:updateEvent
-//         })
-//     }catch(err){
-//         res.status(500).json({
-//             message:"error while update Event",
-//             err:err
-//         })
-//     }
-// }
 
 const deleteEvent = async (req, res) => {
   try {
@@ -432,8 +362,8 @@ const bookSeat = async (req, res) => {
     const { stateId, cityId, quantity = 1, selectedSeats = [], stadiumId } = req.body;
     const userId = req.user._id;
 
-    // ✅ Step 1: Fetch event
-    const event = await eventModel.findById(eventId);
+    // ✅ Step 1: Fetch event and populate stadium zones
+    const event = await eventModel.findById(eventId).populate("stadiumId");
     if (!event) return res.status(404).json({ message: "Event not found" });
 
     // ✅ Step 2: Ensure bookedSeatLabels is initialized
@@ -458,7 +388,23 @@ const bookSeat = async (req, res) => {
       return res.status(400).json({ message: `Only ${availableSeats} seat(s) left` });
     }
 
-    // ✅ Step 5: Update event seat counts
+    // ✅ Step 5: Calculate ticket price
+    let ticketRate = 0;
+
+    if (event.eventCategory === "Indoor" && selectedSeats.length > 0) {
+      const zones = event.customZones || [];
+      for (const zone of zones) {
+        const zoneSeats = zone.seatLabels || [];
+        const seatsInZone = selectedSeats.filter(seat => zoneSeats.includes(seat));
+
+         console.log(`Zone: ${zone.name || "Unnamed"}, Price: ${zone.price}, Seats matched:`, seatsInZone);
+        ticketRate += seatsInZone.length * zone.price;
+      }
+    } else {
+      ticketRate = event.ticketRate * quantity; // For Zoom/Outdoor or flat-rate
+    }
+
+    // ✅ Step 6: Update event seat counts
     event.bookedSeats += quantity;
     event.bookedSeatLabels.push(...selectedSeats);
     if (event.bookedSeats > event.numberOfSeats) {
@@ -467,7 +413,7 @@ const bookSeat = async (req, res) => {
 
     await event.save();
 
-    // ✅ Step 6: Create ticket
+    // ✅ Step 7: Create ticket with ticketRate
     const ticket = await ticketModel.create({
       eventId,
       userId,
@@ -477,9 +423,10 @@ const bookSeat = async (req, res) => {
       stadiumId,
       organizerId: event.organizerId,
       quantity,
+      ticketRate,
     });
 
-    // ✅ Step 7: Respond
+    // ✅ Step 8: Respond
     res.status(200).json({
       message: "Seat(s) booked successfully",
       data: { ticket, event },
@@ -492,53 +439,75 @@ const bookSeat = async (req, res) => {
 };
 
 
-
 // const bookSeat = async (req, res) => {
 //   try {
 //     const eventId = req.params.id;
 //     const { stateId, cityId, quantity = 1, selectedSeats = [], stadiumId } = req.body;
+//     const userId = req.user._id;
 
-//     // ✅ Ensure the logged-in user is booking for themselves
-//     // if (req.user._id !== userId) {
-//     //   return res.status(403).json({ message: "You can only book for your own account." });
-//     // }
-
-//    const userId = req.user._id;
-
+//     //  Step 1: Fetch event
 //     const event = await eventModel.findById(eventId);
 //     if (!event) return res.status(404).json({ message: "Event not found" });
 
-//     const availableSeats = event.numberOfSeats - event.bookedSeats;
+//     //  Step 2: Ensure bookedSeatLabels is initialized
+//     event.bookedSeatLabels = event.bookedSeatLabels || [];
 
-//     // Prevent negative or overbooking
+//     //  Step 3: Check if any of the selected seats are already booked
+//     const alreadyBooked = selectedSeats.some(seat =>
+//       event.bookedSeatLabels.includes(seat)
+//     );
+//     if (alreadyBooked) {
+//       return res.status(400).json({
+//         message: "One or more selected seats are already booked.",
+//       });
+//     }
+
+//     //  Step 4: Check seat availability
+//     const availableSeats = event.numberOfSeats - event.bookedSeats;
 //     if (availableSeats <= 0) {
 //       return res.status(400).json({ message: "Event is sold out" });
 //     }
-
 //     if (availableSeats < quantity) {
 //       return res.status(400).json({ message: `Only ${availableSeats} seat(s) left` });
 //     }
 
-//     //  Update seat count safely
+//       // ✅ Calculate ticket price dynamically
+//     let ticketRate = 0;
+
+//     if (event.eventCategory === "Indoor" && selectedSeats.length > 0) {
+//       const zones = event.stadiumId?.zones || [];
+//       for (const zone of zones) {
+//         const zoneSeats = zone.seatLabels || [];
+//         const seatsInZone = selectedSeats.filter(seat => zoneSeats.includes(seat));
+//         ticketRate += seatsInZone.length * zone.price;
+//       }
+//     } else {
+//       ticketRate = event.ticketRate * quantity; // For Zoom/Outdoor or flat-rate events
+//     }
+
+//     //  Step 5: Update event seat counts
 //     event.bookedSeats += quantity;
+//     event.bookedSeatLabels.push(...selectedSeats);
 //     if (event.bookedSeats > event.numberOfSeats) {
 //       return res.status(400).json({ message: "Cannot exceed total seat capacity" });
 //     }
 
 //     await event.save();
 
-//     //  Create ticket record
+//     //  Step 6: Create ticket
 //     const ticket = await ticketModel.create({
 //       eventId,
-//       userId: req.user._id,
+//       userId,
 //       stateId,
 //       cityId,
 //       selectedSeats,
 //       stadiumId,
 //       organizerId: event.organizerId,
 //       quantity,
+//       ticketRate
 //     });
 
+//     // ✅ Step 7: Respond
 //     res.status(200).json({
 //       message: "Seat(s) booked successfully",
 //       data: { ticket, event },
@@ -549,6 +518,10 @@ const bookSeat = async (req, res) => {
 //     res.status(500).json({ message: "Internal Server Error", error: err.message });
 //   }
 // };
+
+
+
+
 
 
 const getTicketsByUser = async (req, res) => {

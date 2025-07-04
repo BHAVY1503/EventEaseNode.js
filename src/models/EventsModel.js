@@ -31,7 +31,7 @@ const eventsSchema = new Schema({
     },
     ticketRate:{
        type:Number,
-       default:"free"
+       default:"0"
     },
     stateId:{
         type:Schema.Types.ObjectId,
