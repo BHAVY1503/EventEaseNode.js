@@ -2,25 +2,7 @@ const Stadium = require("../models/StadiumModel");
 const { uploadFileToCloudinary } = require("../utils/CloudinaryUtils");
 const fs = require("fs");
 
-// const generateAutoZones = (totalSeats, seatsPerZone = 20) => {
-//   const zones = [];
-//   const zoneCount = Math.ceil(totalSeats / seatsPerZone);
-//   let seatCounter = 1;
 
-//   for (let i = 0; i < zoneCount; i++) {
-//     const zoneName = String.fromCharCode(65 + i); // A, B, C...
-//     const seatLabels = [];
-
-//     for (let j = 1; j <= seatsPerZone && seatCounter <= totalSeats; j++) {
-//       seatLabels.push(`${zoneName}${j}`);
-//       seatCounter++;
-//     }
-
-//     zones.push({ name: zoneName, seatLabels });
-//   }
-
-//   return zones;
-// };
 const generateAutoZones = (totalSeats, seatsPerZone = 20, zonePrices = []) => {
   const zones = [];
   const zoneCount = Math.ceil(totalSeats / seatsPerZone);
@@ -105,6 +87,58 @@ const addStadium = async (req, res) => {
   }
 };
 
+const updateStadium = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      name,
+      totalSeats,
+      address,
+      latitude,
+      longitude,
+      seatsPerZone = 20,
+      zonePrices = [],
+    } = req.body;
+
+    const stadium = await Stadium.findById(id);
+    if (!stadium) return res.status(404).json({ message: "Stadium not found" });
+
+    const parsedZonePrices = typeof zonePrices === 'string'
+      ? JSON.parse(zonePrices)
+      : zonePrices;
+
+    const zones = generateAutoZones(
+      parseInt(totalSeats),
+      parseInt(seatsPerZone),
+      parsedZonePrices
+    );
+
+    let imageUrl = stadium.imageUrl;
+    if (req.file) {
+      const cloudRes = await uploadFileToCloudinary(req.file);
+      imageUrl = cloudRes.secure_url;
+    }
+
+    stadium.name = name.trim();
+    stadium.totalSeats = parseInt(totalSeats);
+    stadium.location = {
+      address: address.trim(),
+      latitude: parseFloat(latitude),
+      longitude: parseFloat(longitude),
+    };
+    stadium.zones = zones;
+    stadium.imageUrl = imageUrl;
+
+    await stadium.save();
+    res.status(200).json({ message: "Stadium updated successfully", stadium });
+
+  } catch (err) {
+    console.error("Error updating stadium:", err);
+    res.status(500).json({ message: "Internal Server Error", error: err.message });
+  }
+};
+
+
 
 const getAllStadiums = async (req, res) => {
   try {
@@ -137,5 +171,5 @@ const getMyStadiums = async (req, res) => {
   }
 };
 
-module.exports = { addStadium, getAllStadiums, getStadiumById, getMyStadiums };
+module.exports = { addStadium, getAllStadiums, getStadiumById, getMyStadiums, updateStadium };
 

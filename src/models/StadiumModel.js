@@ -20,7 +20,7 @@ const stadiumSchema = new mongoose.Schema({
    organizerId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "organizer",
-    required: true,
+    // required: true,
   },
 
 imageUrl: { type: String },
