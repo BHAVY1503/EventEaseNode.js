@@ -1,7 +1,12 @@
 const eventModel = require("../models/EventsModel")
 const ticketModel = require("../models/TicketModal")
 const stadiumModel = require("../models/StadiumModel")
+
 // const userModel = require("../models/UserModel")
+
+const userModel = require("../models/UserModel")
+const { sendingMail } = require("../utils/MailUtils");
+
 const multer = require("multer") //for uploading files
 const path = require("path")
 const cloudinaryUtil = require("../utils/CloudinaryUtils");
@@ -186,6 +191,7 @@ const getAllEvents = async (req, res) => {
 };
 
 
+
 const updateEvent = async (req, res) => {
   try {
     const eventId = req.params.id;
@@ -215,6 +221,28 @@ const updateEvent = async (req, res) => {
     if (req.file) {
       const cloudinaryResponse = await cloudinaryUtil.uploadFileToCloudinary(req.file);
       updateData.eventImgUrl = cloudinaryResponse.secure_url;
+    }
+
+     // Indoor logic
+    if (updateData.eventCategory === "Indoor" && updateData.stadiumId) {
+      const stadium = await stadiumModel.findById(updateData.stadiumId);
+      if (stadium) {
+        updateData.numberOfSeats = stadium.totalSeats;
+        updateData.latitude = stadium.location.latitude;
+        updateData.longitude = stadium.location.longitude;
+      }
+    }
+
+    // Outdoor: Make sure lat/lng present
+    if (updateData.eventCategory === "Outdoor") {
+      if (!updateData.latitude || !updateData.longitude) {
+        return res.status(400).json({ message: "Latitude and longitude required for Outdoor events" });
+      }
+    }
+
+    // Zoom logic
+    if (updateData.eventCategory === "ZoomMeeting" && !updateData.zoomUrl) {
+      return res.status(400).json({ message: "Zoom URL is required for ZoomMeeting" });
     }
 
     // Step 5: Perform update
@@ -364,12 +392,16 @@ const bookSeat = async (req, res) => {
 
     // ✅ Step 1: Fetch event and populate stadium zones
     const event = await eventModel.findById(eventId).populate("stadiumId");
+
+    //  Step 1: Fetch event
+    const event = await eventModel.findById(eventId);
+
     if (!event) return res.status(404).json({ message: "Event not found" });
 
-    // ✅ Step 2: Ensure bookedSeatLabels is initialized
+    //  Step 2: Ensure bookedSeatLabels is initialized
     event.bookedSeatLabels = event.bookedSeatLabels || [];
 
-    // ✅ Step 3: Check if any of the selected seats are already booked
+    //  Step 3: Check if any of the selected seats are already booked
     const alreadyBooked = selectedSeats.some(seat =>
       event.bookedSeatLabels.includes(seat)
     );
@@ -379,7 +411,7 @@ const bookSeat = async (req, res) => {
       });
     }
 
-    // ✅ Step 4: Check seat availability
+    //  Step 4: Check seat availability
     const availableSeats = event.numberOfSeats - event.bookedSeats;
     if (availableSeats <= 0) {
       return res.status(400).json({ message: "Event is sold out" });
@@ -387,6 +419,7 @@ const bookSeat = async (req, res) => {
     if (availableSeats < quantity) {
       return res.status(400).json({ message: `Only ${availableSeats} seat(s) left` });
     }
+
 
     // ✅ Step 5: Calculate ticket price
     let ticketRate = 0;
@@ -405,6 +438,9 @@ const bookSeat = async (req, res) => {
     }
 
     // ✅ Step 6: Update event seat counts
+
+    //  Step 5: Update event seat counts
+
     event.bookedSeats += quantity;
     event.bookedSeatLabels.push(...selectedSeats);
     if (event.bookedSeats > event.numberOfSeats) {
@@ -413,7 +449,11 @@ const bookSeat = async (req, res) => {
 
     await event.save();
 
+
     // ✅ Step 7: Create ticket with ticketRate
+
+    //  Step 6: Create ticket
+
     const ticket = await ticketModel.create({
       eventId,
       userId,
@@ -423,10 +463,61 @@ const bookSeat = async (req, res) => {
       stadiumId,
       organizerId: event.organizerId,
       quantity,
+
       ticketRate,
     });
 
     // ✅ Step 8: Respond
+
+      eventCategory: event.category,
+    });
+
+       // Step 7: Fetch user
+    const user = await userModel.findById(userId);
+if (user && user.email) {
+  let venueInfo = "To be announced";
+
+  // Generate Google Maps link if coordinates are available
+  const mapsLink =
+    event.latitude && event.longitude
+      ? `https://www.google.com/maps?q=${event.latitude},${event.longitude}`
+      : null;
+
+  if (event.eventCategory === "ZoomMeeting" && event.zoomUrl) {
+    venueInfo = `<a href="${event.zoomUrl}" target="_blank">Join Zoom Meeting</a>`;
+  } else if (mapsLink) {
+    // Use Google Maps link for Indoor or Outdoor
+    venueInfo = `<a href="${mapsLink}" target="_blank">${event.location || "View on Map"}</a>`;
+  }
+
+  const htmlContent = `
+    <h2>🎟️ Ticket Confirmation - ${event.title}</h2>
+    <p>Dear ${user.name || "User"},</p>
+    <p>Thank you for booking your seat(s) for <strong>${event.eventName}</strong>.</p>
+    <p><strong>Date:</strong> ${new Date(event.startDate).toDateString()}</p>
+
+    <p><strong>Venue:</strong> ${venueInfo}</p>
+
+    <p><strong>Selected Seats:</strong> ${
+      selectedSeats.length ? selectedSeats.join(", ") : "General Admission"
+    }</p>
+    <p><strong>Quantity:</strong> ${quantity}</p>
+    <br/>
+    <p>Enjoy the event!</p>
+    <p>- EventEase Team</p>
+  `;
+
+  try {
+    await sendingMail(user.email, "Your Ticket Booking Confirmation", htmlContent);
+    console.log("✅ Confirmation email sent to", user.email);
+  } catch (emailErr) {
+    console.error("❌ Failed to send email:", emailErr.message);
+  }
+}
+
+
+    //  Step 8: Respond
+
     res.status(200).json({
       message: "Seat(s) booked successfully",
       data: { ticket, event },

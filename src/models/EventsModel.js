@@ -74,7 +74,7 @@ location:{
   eventCategory: {
   type: String,
   enum: ["Indoor", "Outdoor","ZoomMeeting"],
-  required: true,
+//   required: true,
  },
  stadiumId: {
   type: Schema.Types.ObjectId,
