@@ -34,30 +34,60 @@ const getTicketsByOrganizer = async (req, res) => {
 
 const getTicketsByUser = async (req, res) => {
   try {
+    const userId = req.user._id;
 
-  //   if (req.user._id !== req.params.userId) {
-  //   return res.status(403).json({ message: "You can only access your own tickets" });
-  // }
-
-  const userId = req.user._id
-
-    const tickets = await ticketModel.find({ userId: userId })
-      .populate("eventId", "eventName startDate")
+    const tickets = await ticketModel.find({ userId })
+      .populate({
+        path: "eventId",
+        select: "eventName eventImage eventCategory startDate endDate latitude longitude stadiumId",
+        populate: {
+          path: "stadiumId",
+          select: "zones"
+        }
+      })
       .populate("organizerId", "name")
       .populate("stateId", "Name")
       .populate("cityId", "name");
 
     res.status(200).json({
       message: "User tickets fetched successfully",
-      data: tickets
+      data: tickets,
     });
   } catch (err) {
     res.status(500).json({
       message: "Error fetching user tickets",
-      error: err.message
+      error: err.message,
     });
   }
 };
+
+
+// const getTicketsByUser = async (req, res) => {
+//   try {
+
+//   //   if (req.user._id !== req.params.userId) {
+//   //   return res.status(403).json({ message: "You can only access your own tickets" });
+//   // }
+
+//   const userId = req.user._id
+
+//     const tickets = await ticketModel.find({ userId: userId })
+//       .populate("eventId", "eventName startDate")
+//       .populate("organizerId", "name")
+//       .populate("stateId", "Name")
+//       .populate("cityId", "name");
+
+//     res.status(200).json({
+//       message: "User tickets fetched successfully",
+//       data: tickets
+//     });
+//   } catch (err) {
+//     res.status(500).json({
+//       message: "Error fetching user tickets",
+//       error: err.message
+//     });
+//   }
+// };
 
 
 const getAllTicketsGroupedByEvent = async (req, res) => {

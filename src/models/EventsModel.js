@@ -32,12 +32,12 @@ const eventsSchema = new Schema({
     stateId:{
         type:Schema.Types.ObjectId,
         ref:"state",
-        required:true
+        // required:true
     },
     cityId:{
         type:Schema.Types.ObjectId,
         ref:"city",
-        required:true
+        // required:true
     },
     organizerId:{
         type:Schema.Types.ObjectId,
@@ -58,7 +58,7 @@ selectedSeats:{
 location:{
     type:String,
     default:""
-},
+ },
  latitude: {
     type: Number,
     required: false,
@@ -70,15 +70,24 @@ location:{
   eventCategory: {
   type: String,
   enum: ["Indoor", "Outdoor","ZoomMeeting"],
-  required: true,
+//   required: true,
+ },
+ stadiumId: {
+  type: Schema.Types.ObjectId,
+  ref: "Stadium",
 },
-seatLayout: [String],
+bookedSeatLabels: {
+  type: [String],
+  default: [],
+},
+
+ seatLayout: [String],
 
     // rating: {
     // type: Number,
     // min: 1,
     // max: 5,
-    // default: 0,
+    // default:0,
     // },
 
     
