@@ -45,6 +45,10 @@ app.use(contactusRoutes)
 const stadiumRoutes= require("./src/routes/StadiumRoutes")
 app.use(stadiumRoutes)
 
+//Payment
+const paymentRoutes = require("./src/routes/PaymentRoutes")
+app.use("/payment",paymentRoutes)
+
 mongoose.connect("mongodb://127.0.0.1:27017/EventEase").then(()=>{
     console.log("database connected....")
 })
