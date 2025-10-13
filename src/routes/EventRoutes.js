@@ -23,8 +23,9 @@ routes.post("/addeventwithfile",verifyToken,checkRole(["Organizer","Admin"]), up
 routes.put("/updateevent/:id",verifyToken,checkRole(["Organizer", "Admin"]),upload.single("image"), eventController.updateEvent)
 routes.delete("/deleteevent/:id",verifyToken,checkRole(["Organizer", "Admin"]),eventController.deleteEvent)
 routes.get("/geteventbyorganizerid",verifyToken,checkRole(["Organizer"]),eventController.getEventByOrganizerId)
-routes.post("/bookseat/:id",verifyToken,checkRole(["User","Organizer"]), eventController.bookSeat);
+routes.post("/bookseat/:id",verifyToken,checkRole(["User","Organizer","Admin"]), eventController.bookSeat);
 routes.get("/groupedeventsbyorganizer",verifyToken,checkRole(["Admin"]),eventController.getEventsGroupedByOrganizer)
+routes.get("/adminevents",verifyToken,checkRole(["Admin"]),eventController.getAdminEvents)
 
 
 routes.get("/stats", eventController.getStats); 

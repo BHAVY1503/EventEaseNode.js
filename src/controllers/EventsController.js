@@ -3,6 +3,7 @@ const ticketModel = require("../models/TicketModal")
 const stadiumModel = require("../models/StadiumModel")
 // const userModel = require("../models/UserModel")
 const userModel = require("../models/UserModel")
+const mongoose = require("mongoose");
 const { sendingMail } = require("../utils/MailUtils");
 
 const multer = require("multer") //for uploading files
@@ -38,7 +39,12 @@ const addEventWithFile = async (req, res) => {
     // Organizer from token
     req.body.organizerId = req.user._id;
 
-    // ✅ Handle zonePrices override for Indoor events
+     //  Mark Admin events
+    if (req.user.role === "Admin") {
+      req.body.isAdminEvent = true;
+    }
+
+    //  Handle zonePrices override for Indoor events
    if (req.body.eventCategory === "Indoor" && req.body.zonePrices) {
   try {
     let zonePrices = [];
@@ -139,6 +145,14 @@ const updateEvent = async (req, res) => {
     // Step 3: Prepare updated data
     const updateData = { ...req.body };
 
+      // Validate ObjectId fields
+    const objectIdFields = ["stadiumId", "stateId", "cityId", "organizerId"];
+    objectIdFields.forEach((field) => {
+      if (updateData[field] === "undefined" || !updateData[field] || !mongoose.Types.ObjectId.isValid(updateData[field])) {
+        delete updateData[field];
+      }
+    });
+
     if (updateData.startDate) {
       updateData.startDate = new Date(updateData.startDate);
     }
@@ -197,6 +211,7 @@ const deleteEvent = async (req, res) => {
   try {
     const eventId = req.params.id;
     const organizerId = req.user._id;
+    const userRole = req.user.role;
 
     // Step 1: Find the event
     const event = await eventModel.findById(eventId);
@@ -206,7 +221,11 @@ const deleteEvent = async (req, res) => {
     }
 
     // Step 2: Check if this organizer owns the event
-    if (event.organizerId.toString() !== organizerId.toString()) {
+    // if (event.organizerId.toString() !== organizerId.toString()) {
+    //   return res.status(403).json({ message: "Unauthorized: You can't delete this event" });
+    // }
+      // Allow: organizer who created OR admin
+    if (event.organizerId.toString() !== organizerId.toString() && userRole !== "Admin") {
       return res.status(403).json({ message: "Unauthorized: You can't delete this event" });
     }
 
@@ -480,6 +499,30 @@ const getEventsGroupedByOrganizer = async (req, res) => {
 };
 
 
+const getAdminEvents = async (req, res) => {
+  try {
+    const adminEvents = await eventModel
+      .find({ isAdminEvent: true })
+      .populate("stateId", "Name")
+      .populate("cityId", "name")
+      .populate("stadiumId")
+      .populate("organizerId", "name email"); // optional
+
+    if (adminEvents.length === 0) {
+      return res.status(404).json({ message: "No Admin events found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: adminEvents,
+    });
+  } catch (err) {
+    console.error("Error fetching Admin events:", err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+
 
 
 
@@ -496,6 +539,7 @@ module.exports = {
     getEventStats,
     bookSeat,
     getTicketsByUser,
-    getEventsGroupedByOrganizer
+    getEventsGroupedByOrganizer,
+    getAdminEvents
     
 }

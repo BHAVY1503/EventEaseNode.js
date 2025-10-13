@@ -98,6 +98,11 @@ customZones: [
 
  seatLayout: [String],
 
+   isAdminEvent: {
+        type: Boolean,
+        default: false
+    }
+
     // rating: {
     // type: Number,
     // min: 1,

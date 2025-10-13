@@ -51,6 +51,9 @@ app.use("/payment",paymentRoutes)
 
 mongoose.connect("mongodb://127.0.0.1:27017/EventEase").then(()=>{
     console.log("database connected....")
+
+    //  Start WhatsApp Reminder Cron Job when server is started
+    require("./src/cron/sendWhatsappReminders");
 })
 
 const PORT = 3100
