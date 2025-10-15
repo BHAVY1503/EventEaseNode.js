@@ -33,13 +33,25 @@ cron.schedule("0 9 * * *", async () => {
       for (const ticket of tickets) {
         const user = ticket.userId;
         if (!user || !user.email) continue;
+        let venueInfo = "To be announced";
+
+      const mapsLink =
+        event.latitude && event.longitude
+          ? `https://www.google.com/maps?q=${event.latitude},${event.longitude}`
+          : null;
+
+      if (event.eventCategory === "ZoomMeeting" && event.zoomUrl) {
+        venueInfo = `<a href="${event.zoomUrl}" target="_blank">Join Zoom Meeting</a>`;
+      } else if (mapsLink) {
+        venueInfo = `<a href="${mapsLink}" target="_blank">${event.location || "View on Map"}</a>`;
+      }
 
         const htmlContent = `
           <h2>🎉 Reminder: ${event.eventName} is tomorrow!</h2>
           <p>Dear ${user.name || "User"},</p>
           <p>This is a friendly reminder that your event <strong>${event.eventName}</strong> will start on:</p>
           <p><strong>${new Date(event.startDate).toLocaleString()}</strong></p>
-          <p><strong>Venue:</strong> ${event.location || "See event details"}</p>
+          <p><strong>Venue:</strong> ${venueInfo}</p>
           <p>We can’t wait to see you there!</p>
           <br/>
           <p>- EventEase Team</p>
