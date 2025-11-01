@@ -36,11 +36,19 @@ const eventsSchema = new Schema({
     stateId:{
         type:Schema.Types.ObjectId,
         ref:"state",
+          // required: function () {
+    //     return this.eventCategory !== "ZoomMeeting"; // only required for Indoor/Outdoor
+    // },
         // required:true
-    },
+     
+  },
+    
     cityId:{
         type:Schema.Types.ObjectId,
         ref:"city",
+        //   required: function () {
+        // return this.eventCategory !== "ZoomMeeting"; // only required for Indoor/Outdoor
+    // },
         // required:true
     },
     organizerId:{
@@ -101,7 +109,20 @@ customZones: [
    isAdminEvent: {
         type: Boolean,
         default: false
-    }
+    },
+
+   isApproved: {
+    type: Boolean,
+    default: false, // false until admin approves
+  },
+
+  approvalStatus: {
+  type: String,
+  enum: ["Pending", "Approved", "Rejected"],
+  default: "Pending",
+},  
+
+ rejectionReason: { type: String, default: "" },
 
     // rating: {
     // type: Number,

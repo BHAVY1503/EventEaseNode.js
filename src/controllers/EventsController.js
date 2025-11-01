@@ -3,6 +3,8 @@ const ticketModel = require("../models/TicketModal")
 const stadiumModel = require("../models/StadiumModel")
 // const userModel = require("../models/UserModel")
 const userModel = require("../models/UserModel")
+const Organizer = require("../models/OrganizerModel");
+
 const mongoose = require("mongoose");
 const { sendingMail } = require("../utils/MailUtils");
 
@@ -39,10 +41,22 @@ const addEventWithFile = async (req, res) => {
     // Organizer from token
     req.body.organizerId = req.user._id;
 
-     //  Mark Admin events
+       // ✅ Add approval system logic
+    if (req.user.role === "Organizer") {
+      req.body.isApproved = false;
+      req.body.approvalStatus = "Pending";
+    }
+
     if (req.user.role === "Admin") {
+      req.body.isApproved = true;
+      req.body.approvalStatus = "Approved";
       req.body.isAdminEvent = true;
     }
+
+     //  Mark Admin events
+    // if (req.user.role === "Admin") {
+    //   req.body.isAdminEvent = true;
+    // }
 
     //  Handle zonePrices override for Indoor events
    if (req.body.eventCategory === "Indoor" && req.body.zonePrices) {
@@ -85,6 +99,21 @@ const addEventWithFile = async (req, res) => {
   }
 }
 
+if (req.body.eventCategory === "ZoomMeeting") {
+    // Remove stateId and cityId
+    req.body.stateId = undefined;
+    req.body.cityId = undefined;
+
+    // Ensure Zoom URL is provided
+    if (!req.body.zoomUrl) {
+        return res.status(400).json({ message: "Zoom URL is required for ZoomMeeting" });
+    }
+} else {
+    // For Indoor/Outdoor events, make sure empty state/city fields are undefined
+    if (!req.body.stateId) req.body.stateId = undefined;
+    if (!req.body.cityId) req.body.cityId = undefined;
+}
+
     const savedEvent = await eventModel.create(req.body);
 
     res.status(200).json({
@@ -102,7 +131,7 @@ const addEventWithFile = async (req, res) => {
 const getAllEvents = async (req, res) => {
   try {
     const allEvents = await eventModel
-      .find()
+      .find({ isApproved: true, approvalStatus: "Approved" })
       .populate("stateId")
       .populate("cityId")
       .populate("organizerId")
@@ -462,41 +491,81 @@ const getTicketsByUser = async (req, res) => {
 };
  
 
-
 const getEventsGroupedByOrganizer = async (req, res) => {
   try {
     const groupedEvents = await eventModel.aggregate([
       {
         $group: {
           _id: "$organizerId",
-          events: { $push: "$$ROOT" }, // push entire event document
+          events: { $push: "$$ROOT" }, // Push entire event document
         },
       },
       {
         $lookup: {
-          from: "organizers", // collection name
+          from: "organizers", // Your organizer collection name
           localField: "_id",
           foreignField: "_id",
           as: "organizerInfo",
         },
       },
-      {
-        $unwind: "$organizerInfo"
-      },
+      { $unwind: "$organizerInfo" },
       {
         $project: {
           organizerName: "$organizerInfo.name",
           organizerEmail: "$organizerInfo.email",
-          events: 1
-        }
-      }
+          events: 1,
+        },
+      },
     ]);
 
-    res.status(200).json({ success: true, data: groupedEvents });
+    // ✅ Populate stadium, state, and city references
+    const populatedGroups = await eventModel.populate(groupedEvents, [
+      { path: "events.stadiumId", select: "name location" },
+      { path: "events.stateId", select: "Name" },
+      { path: "events.cityId", select: "name" },
+    ]);
+
+    res.status(200).json({ success: true, data: populatedGroups });
   } catch (error) {
+    console.error("Error grouping events:", error);
     res.status(500).json({ success: false, message: "Failed to group events", error });
   }
 };
+
+// const getEventsGroupedByOrganizer = async (req, res) => {
+//   try {
+//     const groupedEvents = await eventModel.aggregate([
+//       {
+//         $group: {
+//           _id: "$organizerId",
+//           events: { $push: "$$ROOT" }, // push entire event document
+//         },
+//       },
+//       {
+//         $lookup: {
+//           from: "organizers", // collection name
+//           localField: "_id",
+//           foreignField: "_id",
+//           as: "organizerInfo",
+//         },
+//       },
+//       {
+//         $unwind: "$organizerInfo"
+//       },
+//       {
+//         $project: {
+//           organizerName: "$organizerInfo.name",
+//           organizerEmail: "$organizerInfo.email",
+//           events: 1
+//         }
+//       }
+//     ]);
+
+//     res.status(200).json({ success: true, data: groupedEvents });
+//   } catch (error) {
+//     res.status(500).json({ success: false, message: "Failed to group events", error });
+//   }
+// };
 
 
 const getAdminEvents = async (req, res) => {
@@ -523,6 +592,154 @@ const getAdminEvents = async (req, res) => {
 };
 
 
+const getAllEventsForAdmin = async (req, res) => {
+  try {
+    const allEvents = await eventModel
+      .find()
+      .populate("stateId cityId organizerId stadiumId");
+
+    res.status(200).json({
+      message: "All events (admin view)",
+      data: allEvents,
+    });
+  } catch (err) {
+    console.error("Error in getAllEventsForAdmin:", err);
+    res.status(500).json({
+      message: "Internal Server Error",
+      error: err.message,
+    });
+  }
+};
+
+
+const approveEvent = async (req, res) => {
+  try {
+    const { eventId } = req.params;
+
+    const updatedEvent = await eventModel.findByIdAndUpdate(
+      eventId,
+      { isApproved: true, approvalStatus: "Approved" },
+      { new: true }
+    );
+
+    if (!updatedEvent)
+      return res.status(404).json({ message: "Event not found" });
+
+    const organizer = await Organizer.findById(updatedEvent.organizerId);
+
+    if (organizer?.email) {
+      try {
+        await sendingMail(
+          organizer.email,
+          "Your Event Has Been Approved!",
+          `<p>Hello <strong>${organizer.name}</strong>,</p>
+           <p>Your event "<strong>${updatedEvent.eventName}</strong>" has been <span style="color:green;">approved</span> by the admin.</p>
+           <p>Thanks,<br/>EventEase Team</p>`
+        );
+      } catch (emailErr) {
+        console.error("Failed to send approval email:", emailErr.message);
+      }
+    }
+
+    res.status(200).json({
+      message: "Event approved successfully",
+      data: updatedEvent,
+    });
+  } catch (err) {
+    console.error("Approve Event Error:", err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+
+const rejectEvent = async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const { reason } = req.body; // <-- receive reason from admin
+
+    const updatedEvent = await eventModel.findByIdAndUpdate(
+      eventId,
+      { 
+        isApproved: false, 
+        approvalStatus: "Rejected",
+        rejectionReason: reason // <-- store reason
+      },
+      { new: true }
+    );
+
+    if (!updatedEvent)
+      return res.status(404).json({ message: "Event not found" });
+
+    // Fetch organizer email
+    const organizer = await Organizer.findById(updatedEvent.organizerId);
+    if (organizer?.email) {
+      try {
+        await sendingMail(
+          organizer.email,
+          "Your Event Has Been Rejected",
+          `<p>Hello <strong>${organizer.name}</strong>,</p>
+           <p>Your event "<strong>${updatedEvent.eventName}</strong>" has been <span style="color:red;">rejected</span> by the admin.</p>
+           <p><strong>Reason:</strong> ${reason || "No reason provided"}</p>
+           <p>Please contact support for more details.</p>
+           <p>Thanks,<br/>EventEase Team</p>`
+        );
+      } catch (emailErr) {
+        console.error("Failed to send rejection email:", emailErr.message);
+      }
+    }
+
+    res.status(200).json({
+      message: "Event rejected successfully and email sent",
+      data: updatedEvent,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+
+// const rejectEvent = async (req, res) => {
+//   try {
+//     const { eventId } = req.params;
+
+//     const updatedEvent = await eventModel.findByIdAndUpdate(
+//       eventId,
+//       { isApproved: false, approvalStatus: "Rejected" },
+//       { new: true }
+//     );
+
+//     if (!updatedEvent)
+//       return res.status(404).json({ message: "Event not found" });
+
+//     // Fetch organizer email
+//     const organizer = await Organizer.findById(updatedEvent.organizerId);
+//    if (organizer?.email) {
+//   try {
+//     await sendingMail(
+//       organizer.email,
+//       "Your Event Has Been Rejected",
+//       `<p>Hello <strong>${organizer.name}</strong>,</p>
+//        <p>Your event "<strong>${updatedEvent.eventName}</strong>" has been <span style="color:red;">rejected</span> by the admin.</p>
+//        <p>please contact support for more details.</p>
+//        <p>Thanks,<br/>EventEase Team</p>`
+//     );
+//   } catch (emailErr) {
+//     console.error("Failed to send rejection email:", emailErr.message);
+//   }
+// }
+
+//     res.status(200).json({
+//       message: "Event rejected successfully and email sent",
+//       data: updatedEvent,
+//     });
+//   } catch (err) {
+//     res.status(500).json({ message: err.message });
+//   }
+// };
+
+
+
+
 
 
 
@@ -540,6 +757,9 @@ module.exports = {
     bookSeat,
     getTicketsByUser,
     getEventsGroupedByOrganizer,
-    getAdminEvents
+    getAdminEvents,
+    getAllEventsForAdmin,
+    approveEvent,
+    rejectEvent,
     
 }
