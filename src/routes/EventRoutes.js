@@ -26,6 +26,10 @@ routes.get("/geteventbyorganizerid",verifyToken,checkRole(["Organizer"]),eventCo
 routes.post("/bookseat/:id",verifyToken,checkRole(["User","Organizer","Admin"]), eventController.bookSeat);
 routes.get("/groupedeventsbyorganizer",verifyToken,checkRole(["Admin"]),eventController.getEventsGroupedByOrganizer)
 routes.get("/adminevents",verifyToken,checkRole(["Admin"]),eventController.getAdminEvents)
+routes.get("/admin/getallevents",verifyToken,checkRole(["Admin"]),eventController.getAllEventsForAdmin)
+routes.put("/approveevent/:eventId",verifyToken,checkRole(["Admin"]),eventController.approveEvent)
+routes.put("/rejectevent/:eventId",verifyToken,checkRole(["Admin"]),eventController.rejectEvent)
+
 
 
 routes.get("/stats", eventController.getStats); 
