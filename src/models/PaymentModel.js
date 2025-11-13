@@ -22,7 +22,7 @@ const paymentSchema = new mongoose.Schema({
   },
   paymentId: {
     type: String,
-    required: true
+    // required: true
   },
   amount: {
     type: Number,
@@ -36,7 +36,9 @@ const paymentSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now
-  }
+  },
+   updatedAt: {
+     type: Date },
 });
 
 module.exports = mongoose.model('payment', paymentSchema);
