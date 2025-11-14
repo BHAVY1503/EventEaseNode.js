@@ -367,6 +367,13 @@ const bookSeat = async (req, res) => {
     const { stateId, cityId, quantity = 1, selectedSeats = [], stadiumId } = req.body;
     const userId = req.user._id;
 
+     const loggedUser = await userModel.findById(userId);
+    if (!loggedUser.isVerified) {
+      return res.status(403).json({
+        message: "Please verify your email before booking tickets."
+      });
+    }
+
     // Step 1: Fetch event and populate stadium zones
     const event = await eventModel.findById(eventId);
     if (!event) return res.status(404).json({ message: "Event not found" });
