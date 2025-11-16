@@ -1,6 +1,7 @@
 const Razorpay = require("razorpay");
 const crypto = require("crypto");
 const PaymentModel = require("../models/PaymentModel");
+const EventModel = require("../models/EventsModel"); // adjust path
 const path = require("path");
 const fs = require("fs");
 const PDFDocument = require("pdfkit");
@@ -22,31 +23,77 @@ const razorpay = new Razorpay({
 });
 
 // ------------------- CREATE ORDER -------------------
+// const createOrder = async (req, res) => {
+//   try {
+//     const { amount, eventId, organizerId } = req.body;
+
+//     if (!amount || amount < 1) {
+//       return res.status(400).json({ success: false, message: "Invalid amount" });
+//     }
+
+//     // Create Razorpay order
+//     const options = {
+//       amount: amount * 100, // convert ₹ → paise
+//       currency: "INR",
+//       receipt: `receipt_${Date.now()}`,
+//       notes: {
+//         userId: req.user._id.toString(),
+//         eventId,
+//       },
+//     };
+
+//     const order = await razorpay.orders.create(options);
+
+//     // ✅ Save order in DB with status "pending" (no paymentId yet)
+//     const payment = new PaymentModel({
+//       userId: req.user._id,
+//       organizerId : req.user.role === "Organizer" ? req.user._id : organizerId,
+//       eventId,
+//       orderId: order.id,
+//       amount,
+//       status: "pending",
+//     });
+
+//     await payment.save();
+
+//     res.status(200).json({
+//       success: true,
+//       order,
+//     });
+//   } catch (error) {
+//     console.error("Payment Order Error:", error);
+//     res.status(500).json({
+//       success: false,
+//       message: "Error creating payment order",
+//     });
+//   }
+// };
 const createOrder = async (req, res) => {
   try {
-    const { amount, eventId, organizerId } = req.body;
+    const { amount, eventId } = req.body;
 
-    if (!amount || amount < 1) {
-      return res.status(400).json({ success: false, message: "Invalid amount" });
+    // 1️⃣ Fetch event to get organizer
+    const event = await EventModel.findById(eventId);
+    if (!event) {
+      return res.status(404).json({ success: false, message: "Event not found" });
     }
 
-    // Create Razorpay order
+    // 2️⃣ Organizer always comes from event
+    const finalOrganizerId = event.organizerId;
+
+    // 3️⃣ Create Razorpay order
     const options = {
-      amount: amount * 100, // convert ₹ → paise
+      amount: amount * 100,
       currency: "INR",
-      receipt: `receipt_${Date.now()}`,
-      notes: {
-        userId: req.user._id.toString(),
-        eventId,
-      },
+      receipt: `receipt_order_${Date.now()}`,
     };
 
     const order = await razorpay.orders.create(options);
 
-    // ✅ Save order in DB with status "pending" (no paymentId yet)
+    // 4️⃣ Save payment
     const payment = new PaymentModel({
       userId: req.user._id,
-      organizerId : req.user.role === "Organizer" ? req.user._id : organizerId,
+      organizerId: finalOrganizerId,   // 🔥 FIXED
       eventId,
       orderId: order.id,
       amount,
@@ -55,18 +102,14 @@ const createOrder = async (req, res) => {
 
     await payment.save();
 
-    res.status(200).json({
-      success: true,
-      order,
-    });
-  } catch (error) {
-    console.error("Payment Order Error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error creating payment order",
-    });
+    res.status(200).json({ success: true, order });
+
+  } catch (err) {
+    console.error("Order creation error:", err);
+    res.status(500).json({ success: false, message: err.message });
   }
 };
+
 
 // ------------------- VERIFY PAYMENT -------------------
 // Verify payment signature and send invoice email
@@ -93,18 +136,42 @@ const verifyPayment = async (req, res) => {
     }
 
     // ✅ Update payment record
-    const payment = await PaymentModel.findOneAndUpdate(
-      { orderId: razorpay_order_id },
-      {
-        status: "completed",
-        paymentId: razorpay_payment_id,
-        updatedAt: Date.now(),
-      },
-      { new: true }
-    )
-      .populate("eventId")
-      .populate("userId")
-      .populate("organizerId");
+    // const payment = await PaymentModel.findOneAndUpdate(
+    //   { orderId: razorpay_order_id },
+    //   {
+    //     status: "completed",
+    //     paymentId: razorpay_payment_id,
+    //     updatedAt: Date.now(),
+    //   },
+    //   { new: true }
+    // )
+    //   .populate("eventId")
+    //   .populate("userId")
+    //   .populate("organizerId");
+    let payment = await PaymentModel.findOneAndUpdate(
+  { orderId: razorpay_order_id },
+  {
+    status: "completed",
+    paymentId: razorpay_payment_id,
+    updatedAt: Date.now(),
+  },
+  { new: true }
+);
+
+if (!payment) {
+  return res.status(404).json({ success: false, message: "Payment not found" });
+}
+
+// Ensure EVENT details (Outdoor/Indoor/Zoom) are always loaded
+payment = await payment.populate([
+  { path: "eventId" },
+  { path: "userId" },
+  { path: "organizerId" }
+]);
+// await payment.populate("eventId");
+// await payment.populate("userId");
+// await payment.populate("organizerId");
+
 
     if (!payment) {
       return res.status(404).json({
@@ -159,18 +226,146 @@ const verifyPayment = async (req, res) => {
     doc.end();
 
     writeStream.on("finish", async () => {
-      const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to: recipient.email,
-        subject: `🎟️ Payment Successful - ${payment.eventId.eventName}`,
-        text: `Hi ${recipient.fullName || recipient.name},\n\nYour payment for "${payment.eventId.eventName}" was successful.\nPlease find your invoice attached.\n\nThank you for using EventEase!`,
-        attachments: [
-          {
-            filename: `Invoice_${payment._id}.pdf`,
-            path: filePath,
-          },
-        ],
-      };
+      // Replace the mailOptions in your code with this:
+
+const mailOptions = {
+  from: process.env.EMAIL_USER,
+  to: recipient.email,
+  subject: `🎉 Payment Successful - ${payment.eventId.eventName}`,
+  html: `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <style>
+        body { margin: 0; padding: 0; font-family: 'Arial', sans-serif; background-color: #f5f5f5; }
+        .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; }
+        .header { background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); padding: 40px 30px; text-align: center; }
+        .logo { font-size: 32px; font-weight: bold; color: #ffffff; margin: 0; }
+        .header-subtitle { color: #e0e7ff; font-size: 16px; margin-top: 10px; }
+        .content { padding: 40px 30px; }
+        .success-badge { background-color: #dcfce7; color: #166534; padding: 12px 24px; border-radius: 25px; display: inline-block; font-weight: 600; margin: 20px 0; }
+        .greeting { font-size: 20px; color: #111827; margin-bottom: 20px; }
+        .message { font-size: 16px; color: #4b5563; line-height: 1.6; margin-bottom: 30px; }
+        .details-box { background-color: #f9fafb; border-left: 4px solid #2563eb; padding: 20px; margin: 25px 0; border-radius: 8px; }
+        .detail-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #e5e7eb; }
+        .detail-row:last-child { border-bottom: none; }
+        .detail-label { color: #6b7280; font-weight: 500; }
+        .detail-value { color: #111827; font-weight: 600; }
+        .amount-highlight { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 20px; border-radius: 10px; text-align: center; margin: 25px 0; }
+        .amount-label { font-size: 14px; opacity: 0.9; margin-bottom: 5px; }
+        .amount-value { font-size: 32px; font-weight: bold; }
+        .cta-button { display: inline-block; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 20px 0; }
+        .footer { background-color: #f9fafb; padding: 30px; text-align: center; color: #6b7280; font-size: 14px; }
+        .social-links { margin: 20px 0; }
+        .social-links a { color: #2563eb; text-decoration: none; margin: 0 10px; }
+        .divider { height: 2px; background: linear-gradient(90deg, transparent, #2563eb, transparent); margin: 30px 0; }
+        @media only screen and (max-width: 600px) {
+          .content { padding: 30px 20px; }
+          .header { padding: 30px 20px; }
+          .amount-value { font-size: 28px; }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <!-- Header -->
+        <div class="header">
+          <h1 class="logo">🎟️ EventEase</h1>
+          <p class="header-subtitle">Your Event Management Partner</p>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+          <div style="text-align: center;">
+            <span class="success-badge">✅ Payment Successful</span>
+          </div>
+
+          <h2 class="greeting">Hi ${recipient.fullName || recipient.name}! 🎉</h2>
+          
+          <p class="message">
+            Great news! Your payment has been successfully processed. You're all set for an amazing experience at <strong>${payment.eventId.eventName}</strong>!
+          </p>
+
+          <!-- Amount Highlight -->
+          <div class="amount-highlight">
+            <div class="amount-label">Amount Paid</div>
+            <div class="amount-value">₹${payment.amount.toLocaleString()}</div>
+          </div>
+
+          <!-- Event Details -->
+          <div class="details-box">
+            <h3 style="margin-top: 0; color: #2563eb;">📅 Event Details</h3>
+            <div class="detail-row">
+              <span class="detail-label">Event Name</span>
+              <span class="detail-value">${payment.eventId.eventName}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Date</span>
+              <span class="detail-value">${new Date(payment.eventId.startDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Payment ID</span>
+              <span class="detail-value">${payment.paymentId}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Invoice ID</span>
+              <span class="detail-value">INV-${payment._id.toString().slice(-8).toUpperCase()}</span>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <p style="color: #6b7280; font-size: 14px; text-align: center;">
+            📎 Your detailed invoice is attached to this email for your records.
+          </p>
+
+          <div style="text-align: center; margin-top: 30px;">
+            <p style="color: #6b7280; margin-bottom: 20px;">Need help or have questions?</p>
+            <a href="mailto:${process.env.EMAIL_USER}" class="cta-button">Contact Support</a>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+          <p style="margin: 0 0 10px 0; font-weight: 600; color: #111827;">Thank you for choosing EventEase!</p>
+          <p style="margin: 0 0 20px 0;">We're excited to see you at the event! 🎊</p>
+          
+          <div class="social-links">
+            <a href="#">Facebook</a> • 
+            <a href="#">Twitter</a> • 
+            <a href="#">Instagram</a>
+          </div>
+          
+          <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+            <p style="margin: 5px 0; font-size: 12px;">© ${new Date().getFullYear()} EventEase. All rights reserved.</p>
+            <p style="margin: 5px 0; font-size: 12px;">This is an automated message, please do not reply to this email.</p>
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `,
+  attachments: [
+    {
+      filename: `Invoice_${payment._id}.pdf`,
+      path: filePath,
+    },
+  ],
+};
+      // const mailOptions = {
+      //   from: process.env.EMAIL_USER,
+      //   to: recipient.email,
+      //   subject: `🎟️ Payment Successful - ${payment.eventId.eventName}`,
+      //   text: `Hi ${recipient.fullName || recipient.name},\n\nYour payment for "${payment.eventId.eventName}" was successful.\nPlease find your invoice attached.\n\nThank you for using EventEase!`,
+      //   attachments: [
+      //     {
+      //       filename: `Invoice_${payment._id}.pdf`,
+      //       path: filePath,
+      //     },
+      //   ],
+      // };
 
       await transporter.sendMail(mailOptions);
       console.log(`✅ Invoice email sent to ${recipient.email}`);
