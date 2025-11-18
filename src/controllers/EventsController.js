@@ -5,6 +5,7 @@ const stadiumModel = require("../models/StadiumModel")
 const userModel = require("../models/UserModel")
 const Organizer = require("../models/OrganizerModel");
 
+
 const mongoose = require("mongoose");
 const { sendingMail } = require("../utils/MailUtils");
 
@@ -574,12 +575,36 @@ const bookSeat = async (req, res) => {
     const { stateId, cityId, quantity = 1, selectedSeats = [], stadiumId } = req.body;
     const userId = req.user._id;
 
-    const loggedUser = await userModel.findById(userId);
-    if (!loggedUser.isVerified) {
-      return res.status(403).json({
-        message: "Please verify your email before booking tickets."
-      });
-    }
+    // 1️⃣ Fetch logged user based on role
+let loggedUser;
+
+if (req.user.role === "User") {
+  loggedUser = await userModel.findById(req.user._id);
+} 
+else if (req.user.role === "Organizer") {
+  loggedUser = await Organizer.findById(req.user._id);
+} 
+else {
+  return res.status(403).json({ message: "Invalid role for booking" });
+}
+
+if (!loggedUser) {
+  return res.status(404).json({ message: "Account not found" });
+}
+
+// 2️⃣ Ensure verified account
+if (!loggedUser.isVerified) {
+  return res.status(403).json({ message: "Please verify your email first" });
+}
+
+// 3️⃣ Continue seat booking...
+
+    // const loggedUser = await userModel.findById(userId);
+    // if (!loggedUser.isVerified) {
+    //   return res.status(403).json({
+    //     message: "Please verify your email before booking tickets."
+    //   });
+    // }
 
     // Step 1: Fetch event
     const event = await eventModel.findById(eventId);
