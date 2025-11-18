@@ -22,52 +22,6 @@ const razorpay = new Razorpay({
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
-// ------------------- CREATE ORDER -------------------
-// const createOrder = async (req, res) => {
-//   try {
-//     const { amount, eventId, organizerId } = req.body;
-
-//     if (!amount || amount < 1) {
-//       return res.status(400).json({ success: false, message: "Invalid amount" });
-//     }
-
-//     // Create Razorpay order
-//     const options = {
-//       amount: amount * 100, // convert ₹ → paise
-//       currency: "INR",
-//       receipt: `receipt_${Date.now()}`,
-//       notes: {
-//         userId: req.user._id.toString(),
-//         eventId,
-//       },
-//     };
-
-//     const order = await razorpay.orders.create(options);
-
-//     // ✅ Save order in DB with status "pending" (no paymentId yet)
-//     const payment = new PaymentModel({
-//       userId: req.user._id,
-//       organizerId : req.user.role === "Organizer" ? req.user._id : organizerId,
-//       eventId,
-//       orderId: order.id,
-//       amount,
-//       status: "pending",
-//     });
-
-//     await payment.save();
-
-//     res.status(200).json({
-//       success: true,
-//       order,
-//     });
-//   } catch (error) {
-//     console.error("Payment Order Error:", error);
-//     res.status(500).json({
-//       success: false,
-//       message: "Error creating payment order",
-//     });
-//   }
-// };
 const createOrder = async (req, res) => {
   try {
     const { amount, eventId } = req.body;
@@ -388,8 +342,6 @@ const mailOptions = {
 };
 
 
-
-
 // const verifyPayment = async (req, res) => {
 //   try {
 //     const {
@@ -440,6 +392,8 @@ const mailOptions = {
 // };
 
 // ------------------- GET PAYMENT HISTORY -------------------
+
+
 const getPaymentHistory = async (req, res) => {
   try {
     const payments = await PaymentModel.find({ userId: req.user._id })
