@@ -459,10 +459,236 @@ const getPaymentHistory = async (req, res) => {
   }
 };
 
+// const processRefund = async (req, res) => {
+//   try {
+//     const ticket = await ticketModel
+//       .findById(req.params.ticketId)
+//       .populate("eventId");
+
+//     if (!ticket) return res.status(404).json({ message: "Ticket not found" });
+
+//     if (ticket.refundStatus !== "Pending") {
+//       return res.status(400).json({ message: "Refund is not approved or already processed" });
+//     }
+
+//     const payment = await PaymentModel.findOne({
+//       eventId: ticket.eventId._id,
+//       userId: ticket.userId._id
+//     });
+
+//     const refund = await razorpay.payments.refund(payment.paymentId, {
+//       amount: ticket.refundAmount * 100,
+//     });
+
+//     ticket.refundStatus = "Completed";
+//     ticket.refundTransactionId = refund.id;
+//     ticket.refundDate = new Date();
+//     await ticket.save();
+
+//     return res.json({
+//       success: true,
+//       message: "Refund sent successfully",
+//       refundDetails: refund
+//     });
+
+//   } catch (error) {
+//     res.status(500).json({ error: error.message });
+//   }
+// };
+// In RazorpayController.js - Replace your processRefund function
+
+const processRefund = async (req, res) => {
+  try {
+    const ticket = await ticketModel
+      .findById(req.params.ticketId)
+      .populate("eventId")
+      .populate("userId");
+
+    if (!ticket) return res.status(404).json({ message: "Ticket not found" });
+
+    if (ticket.refundStatus !== "Pending") {
+      return res.status(400).json({ 
+        message: "Refund is not approved or already processed" 
+      });
+    }
+
+    // Find the payment record
+    const payment = await PaymentModel.findOne({
+      eventId: ticket.eventId._id,
+      userId: ticket.userId._id
+    });
+
+    if (!payment) {
+      return res.status(404).json({ message: "Payment record not found" });
+    }
+
+    // 🔥 Process Razorpay refund
+    const refund = await razorpay.payments.refund(payment.paymentId, {
+      amount: ticket.refundAmount * 100, // Convert to paise
+    });
+
+    // 🔥 Update ticket status
+    ticket.refundStatus = "Completed";
+    ticket.refundTransactionId = refund.id;
+    ticket.refundDate = new Date();
+    await ticket.save();
+
+    // 🔥 SEND REFUND COMPLETION EMAIL
+    try {
+      const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: ticket.userId.email,
+        subject: `💰 Refund Processed - ${ticket.eventId.eventName}`,
+        html: `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <style>
+              body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+              .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+              .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); 
+                        color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+              .content { background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; }
+              .success-badge { background: #dcfce7; color: #166534; padding: 10px 20px; 
+                              border-radius: 20px; display: inline-block; font-weight: bold; }
+              .details-box { background: white; padding: 20px; margin: 20px 0; 
+                            border-left: 4px solid #10b981; border-radius: 5px; }
+              .detail-row { display: flex; justify-content: space-between; 
+                           padding: 10px 0; border-bottom: 1px solid #e5e7eb; }
+              .detail-row:last-child { border-bottom: none; }
+              .amount-highlight { background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                                 color: white; padding: 20px; text-align: center; 
+                                 border-radius: 10px; margin: 20px 0; }
+              .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 14px; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="header">
+                <h1>🎟️ EventEase</h1>
+                <p>Refund Confirmation</p>
+              </div>
+              
+              <div class="content">
+                <div style="text-align: center; margin-bottom: 20px;">
+                  <span class="success-badge">✅ Refund Processed Successfully</span>
+                </div>
+
+                <h2>Hi ${ticket.userId.fullName || ticket.userId.name}! 👋</h2>
+                
+                <p>Great news! Your refund has been successfully processed and the amount 
+                has been credited back to your original payment method.</p>
+
+                <div class="amount-highlight">
+                  <div style="font-size: 14px; opacity: 0.9;">Refund Amount</div>
+                  <div style="font-size: 32px; font-weight: bold;">
+                    ₹${ticket.refundAmount.toLocaleString()}
+                  </div>
+                </div>
+
+                <div class="details-box">
+                  <h3 style="margin-top: 0; color: #10b981;">📋 Refund Details</h3>
+                  
+                  <div class="detail-row">
+                    <span style="color: #6b7280;">Event Name</span>
+                    <strong>${ticket.eventId.eventName}</strong>
+                  </div>
+                  
+                  <div class="detail-row">
+                    <span style="color: #6b7280;">Refund Transaction ID</span>
+                    <strong>${refund.id}</strong>
+                  </div>
+                  
+                  <div class="detail-row">
+                    <span style="color: #6b7280;">Original Payment ID</span>
+                    <strong>${payment.paymentId}</strong>
+                  </div>
+                  
+                  <div class="detail-row">
+                    <span style="color: #6b7280;">Refund Date</span>
+                    <strong>${new Date().toLocaleDateString('en-US', { 
+                      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
+                    })}</strong>
+                  </div>
+                  
+                  <div class="detail-row">
+                    <span style="color: #6b7280;">Ticket ID</span>
+                    <strong>${ticket._id}</strong>
+                  </div>
+                </div>
+
+                <div style="background: #fef3c7; padding: 15px; border-left: 4px solid #f59e0b; 
+                           border-radius: 5px; margin: 20px 0;">
+                  <p style="margin: 0; color: #92400e;">
+                    <strong>⏱️ Processing Time:</strong><br>
+                    The refund will appear in your account within 5-7 business days, 
+                    depending on your bank's processing time.
+                  </p>
+                </div>
+
+                <p style="color: #6b7280; font-size: 14px;">
+                  If you have any questions or concerns about this refund, 
+                  please don't hesitate to contact our support team.
+                </p>
+
+                <div style="text-align: center; margin-top: 30px;">
+                  <a href="mailto:${process.env.EMAIL_USER}" 
+                     style="display: inline-block; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+                            color: white; padding: 12px 30px; text-decoration: none; 
+                            border-radius: 8px; font-weight: 600;">
+                    Contact Support
+                  </a>
+                </div>
+              </div>
+
+              <div class="footer">
+                <p style="margin: 0 0 10px 0;"><strong>Thank you for using EventEase!</strong></p>
+                <p style="margin: 0;">© ${new Date().getFullYear()} EventEase. All rights reserved.</p>
+                <p style="margin: 10px 0 0 0; font-size: 12px;">
+                  This is an automated email. Please do not reply.
+                </p>
+              </div>
+            </div>
+          </body>
+          </html>
+        `
+      };
+
+      await transporter.sendMail(mailOptions);
+      console.log(`✅ Refund completion email sent to ${ticket.userId.email}`);
+
+    } catch (mailErr) {
+      console.error("❌ Refund email failed:", mailErr);
+      // Don't fail the entire request if email fails
+    }
+
+    return res.json({
+      success: true,
+      message: "Refund processed successfully and user notified via email",
+      refundDetails: {
+        refundId: refund.id,
+        amount: ticket.refundAmount,
+        status: refund.status,
+        createdAt: refund.created_at
+      }
+    });
+
+  } catch (error) {
+    console.error("❌ Refund Error:", error);
+    res.status(500).json({ 
+      success: false,
+      message: "Failed to process refund",
+      error: error.message 
+    });
+  }
+};
+
+
 module.exports = {
   createOrder,
   verifyPayment,
   getPaymentHistory,
+  processRefund
 };
 
 
