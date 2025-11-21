@@ -28,6 +28,14 @@ const paymentSchema = new mongoose.Schema({
     type: Number,
     required: true
   },
+  refunds: [
+    {
+      refundId: String,
+      amount: Number, // rupees
+      status: String,
+      createdAt: Date
+    }
+  ],
   status: {
     type: String,
     enum: ['pending', 'completed', 'failed'],

@@ -1,0 +1,34 @@
+{"level":"error","message":"Order creation failed","userId":"69170d22af7863f7a65db846"}
+{"level":"error","message":"Order creation failed","userId":"69170d22af7863f7a65db846"}
+{"level":"error","message":"Order creation failed","userId":"69170d22af7863f7a65db846"}
+{"level":"error","message":"Order creation failed","userId":"69170d22af7863f7a65db846"}
+{"level":"error","message":"Order creation failed","userId":"69170d22af7863f7a65db846"}
+{"level":"error","message":"Order creation failed","userId":"69170d22af7863f7a65db846"}
+{"level":"error","message":"Order creation failed","userId":"69170d22af7863f7a65db846"}
+{"level":"error","message":"Order creation failed","userId":"69170d22af7863f7a65db846"}
+{"level":"error","message":"Order creation failed","userId":"69170d22af7863f7a65db846"}
+{"eventId":"690f4b35ad03e0962be8e096","level":"error","message":"Order creation failed (razorpay.orders.create)","razorError":"{\"statusCode\":400,\"error\":{\"code\":\"BAD_REQUEST_ERROR\",\"description\":\"receipt: the length must be no more than 40.\",\"metadata\":{},\"reason\":\"input_validation_failed\",\"source\":\"business\",\"step\":\"payment_initiation\"}}","userId":"69170d22af7863f7a65db846"}
+{"eventId":"690f4b35ad03e0962be8e096","level":"error","message":"Order creation failed (razorpay.orders.create)","razorError":{"code":null,"description":null,"details":{"code":"BAD_REQUEST_ERROR","description":"receipt: the length must be no more than 40.","metadata":{},"reason":"input_validation_failed","source":"business","step":"payment_initiation"}},"userId":"69170d22af7863f7a65db846"}
+{"amount":200,"eventId":"69199c8105138d9d71e54626","level":"info","message":"Order created successfully","orderId":"order_RiJu4nrRUHNKHZ","quantity":1,"userId":"69170d22af7863f7a65db846"}
+{"amount":500,"eventId":"6919a07ecec074d1f8124fdf","level":"info","message":"Order created successfully","orderId":"order_RiJubqXhAnOShy","quantity":5,"userId":"69170d22af7863f7a65db846"}
+{"amount":500,"level":"info","message":"Payment verified successfully","orderId":"order_RiJubqXhAnOShy","paymentId":"pay_RiJuocQ5pA4wnP","userId":"69170d22af7863f7a65db846"}
+{"email":"donald@yopmail.com","level":"info","message":"Invoice email sent","paymentId":"69201f3b394718071e9b1f40"}
+{"calculatedAmount":0,"eventId":"69199d8405138d9d71e54b7c","level":"error","message":"Invalid calculated amount","userId":"69170d22af7863f7a65db846"}
+{"calculatedAmount":0,"eventId":"69199d8405138d9d71e54b7c","level":"error","message":"Invalid calculated amount","userId":"69170d22af7863f7a65db846"}
+{"calculatedAmount":0,"eventId":"69199d8405138d9d71e54b7c","level":"error","message":"Invalid calculated amount","userId":"69170d22af7863f7a65db846"}
+{"calculatedAmount":0,"eventId":"69199d8405138d9d71e54b7c","level":"error","message":"Invalid calculated amount","userId":"69170d22af7863f7a65db846"}
+{"amount":598,"eventId":"69199d8405138d9d71e54b7c","level":"info","message":"Order created successfully","orderId":"order_RiKH2GWsxEkJy2","quantity":2,"userId":"69170d22af7863f7a65db846"}
+{"amount":598,"level":"info","message":"Payment verified successfully","orderId":"order_RiKH2GWsxEkJy2","paymentId":"pay_RiKHHpZm6DZQnc","userId":"69170d22af7863f7a65db846"}
+{"email":"donald@yopmail.com","level":"info","message":"Invoice email sent","paymentId":"692024358271e3db51237643"}
+{"amount":598,"eventId":"69199d8405138d9d71e54b7c","level":"info","message":"Order created successfully","orderId":"order_RiKnsqJbNzjbjO","quantity":2,"userId":"69170d22af7863f7a65db846"}
+{"amount":598,"level":"info","message":"Payment verified successfully","orderId":"order_RiKnsqJbNzjbjO","paymentId":"pay_RiKo9mibcejNg2","userId":"69170d22af7863f7a65db846"}
+{"email":"donald@yopmail.com","level":"info","message":"Invoice email sent","paymentId":"69202b7f3667f92dcb9c3ada"}
+{"amount":200,"eventId":"69199c8105138d9d71e54626","level":"info","message":"Order created successfully","orderId":"order_RiKynTt89Ik5XQ","quantity":1,"userId":"69170d22af7863f7a65db846"}
+{"amount":200,"level":"info","message":"Payment verified successfully","orderId":"order_RiKynTt89Ik5XQ","paymentId":"pay_RiKz17aATvq7jJ","userId":"69170d22af7863f7a65db846"}
+{"level":"info","message":"Invoice generation deferred until booking completes","paymentId":"69202deb1e0e8a6c8f159d50"}
+{"amount":598,"eventId":"69199d8405138d9d71e54b7c","level":"info","message":"Order created successfully","orderId":"order_RiL3OWKimQ3iGv","quantity":2,"userId":"69170d22af7863f7a65db846"}
+{"amount":598,"level":"info","message":"Payment verified successfully","orderId":"order_RiL3OWKimQ3iGv","paymentId":"pay_RiL3eFiWsRHV1R","userId":"69170d22af7863f7a65db846"}
+{"level":"info","message":"Invoice generation deferred until booking completes","paymentId":"69202ef01e0e8a6c8f159e6b"}
+{"amount":1000,"eventId":"6919a07ecec074d1f8124fdf","level":"info","message":"Order created successfully","orderId":"order_RiL8zQxDuG8Nh5","quantity":10,"userId":"69170d22af7863f7a65db846"}
+{"amount":1000,"level":"info","message":"Payment verified successfully","orderId":"order_RiL8zQxDuG8Nh5","paymentId":"pay_RiL9BunOlSpaT9","userId":"69170d22af7863f7a65db846"}
+{"level":"info","message":"Invoice generation deferred until booking completes","paymentId":"6920302e82d879fe050cb0e4"}

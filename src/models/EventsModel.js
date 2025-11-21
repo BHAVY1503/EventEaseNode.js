@@ -125,7 +125,11 @@ customZones: [
   enum: ["Pending", "Approved", "Rejected"],
   default: "Pending",
 },  
+ticketRate:{ 
+  type:Number
 
+}
+,
  rejectionReason: { type: String, default: "" },
 
     // rating: {

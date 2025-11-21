@@ -3,7 +3,12 @@ const { default: mongoose } = require("mongoose")
 const app = express()
 const cros = require("cors")
 app.use(cros())
-app.use(express.json())
+// Capture raw body buffer for webhook signature verification
+app.use(express.json({
+    verify: (req, res, buf) => {
+        req.rawBody = buf;
+    }
+}))
 
 //import roleRoute
 const roleRoutes = require("./src/routes/RoleRoutes")

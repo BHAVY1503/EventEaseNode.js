@@ -11,6 +11,9 @@ const { sendingMail } = require("../utils/MailUtils");
 
 const multer = require("multer") //for uploading files
 const path = require("path")
+const fs = require("fs");
+const nodemailer = require("nodemailer");
+const PDFDocument = require('pdfkit');
 const cloudinaryUtil = require("../utils/CloudinaryUtils");
 const { json } = require("stream/consumers");
 
@@ -774,12 +777,128 @@ const htmlContent = `
 `;
 
 // Then use it in the sendingMail call:
-try {
-  await sendingMail(user.email, `🎉 Your Tickets for ${event.eventName} are Confirmed!`, htmlContent);
-  console.log("✅ Confirmation email sent to", user.email);
-} catch (emailErr) {
-  console.error("❌ Failed to send email:", emailErr.message);
-}
+    try {
+      // Prepare transporter to send email with invoice attachment
+      const transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASS,
+        },
+      });
+
+      // Ensure invoices dir exists
+      const invoicesDir = path.join(__dirname, "../../invoices");
+      if (!fs.existsSync(invoicesDir)) fs.mkdirSync(invoicesDir, { recursive: true });
+
+      const invoicePath = path.join(invoicesDir, `invoice_ticket_${ticket._id}.pdf`);
+
+      // Create a stylish PDF invoice
+      const doc = new PDFDocument({ margin: 40, size: 'A4' });
+      const writeStream = fs.createWriteStream(invoicePath);
+      doc.pipe(writeStream);
+
+      // Branded header
+      doc.rect(0, 0, doc.page.width, 110).fill('#0f172a');
+      doc.fillColor('white').fontSize(26).font('Helvetica-Bold').text('EventEase', 50, 36);
+      doc.fontSize(12).font('Helvetica').fillColor('#e6eef8').text('Ticket Invoice', doc.page.width - 180, 50, { align: 'right' });
+
+      // Invoice meta
+      const invoiceId = `INV-${ticket._id.toString().slice(-8).toUpperCase()}`;
+      doc.fillColor('#9ca3af').fontSize(9).text(`Invoice ID: ${invoiceId}`, 50, 140);
+      doc.text(`Date: ${new Date().toLocaleDateString()}`, 50, 154);
+
+      // Customer & Event columns
+      const leftX = 50;
+      const rightX = doc.page.width / 2 + 10;
+      const startY = 180;
+
+      doc.fontSize(11).fillColor('#0f172a').font('Helvetica-Bold').text('Billed To', leftX, startY);
+      doc.fontSize(10).font('Helvetica').fillColor('#111827').text(user.fullName || user.name || user.email, leftX, startY + 18);
+      doc.fontSize(9).fillColor('#6b7280').text(user.email, leftX, startY + 36);
+
+      doc.fontSize(11).font('Helvetica-Bold').fillColor('#0f172a').text('Event', rightX, startY);
+      doc.fontSize(10).font('Helvetica').fillColor('#111827').text(event.eventName, rightX, startY + 18);
+      doc.fontSize(9).fillColor('#6b7280').text(new Date(event.startDate).toLocaleString(), rightX, startY + 36);
+
+      // Selected seats display
+      if (Array.isArray(selectedSeats) && selectedSeats.length > 0) {
+        doc.moveDown();
+        doc.fontSize(10).font('Helvetica-Bold').fillColor('#0f172a').text('Selected Seats', leftX, startY + 80);
+        const seatY = startY + 100;
+        let offsetX = leftX;
+        selectedSeats.forEach((s, idx) => {
+          const badgeWidth = 80;
+          doc.roundedRect(offsetX, seatY, badgeWidth, 22, 6).fill('#6366f1');
+          doc.fillColor('white').fontSize(10).text(String(s), offsetX + 10, seatY + 5);
+          offsetX += badgeWidth + 8;
+          if (offsetX > doc.page.width - 120) {
+            offsetX = leftX;
+          }
+        });
+      }
+
+      // Pricing table
+      const tableTop = Array.isArray(selectedSeats) && selectedSeats.length > 0 ? startY + 150 : startY + 120;
+      doc.moveTo(50, tableTop).lineTo(doc.page.width - 50, tableTop).stroke('#e5e7eb');
+      doc.fontSize(10).fillColor('#6b7280').text('Description', 60, tableTop + 8);
+      doc.text('Qty', doc.page.width - 220, tableTop + 8);
+      doc.text('Rate', doc.page.width - 140, tableTop + 8);
+      doc.text('Amount', doc.page.width - 80, tableTop + 8);
+
+      const descY = tableTop + 30;
+      doc.fontSize(10).fillColor('#111827').text('Event Ticket', 60, descY);
+      doc.text(String(quantity), doc.page.width - 220, descY);
+      doc.text(`₹${perTicketRate.toLocaleString()}`, doc.page.width - 140, descY);
+      doc.text(`₹${totalPrice.toLocaleString()}`, doc.page.width - 80, descY);
+
+      // Totals
+      const totalsY = descY + 60;
+      doc.roundedRect(doc.page.width - 260, totalsY - 10, 200, 70, 6).fill('#f3f4f6');
+      doc.fillColor('#374151').fontSize(10).text('Subtotal', doc.page.width - 240, totalsY);
+      doc.text(`₹${totalPrice.toLocaleString()}`, doc.page.width - 90, totalsY);
+      doc.font('Helvetica-Bold').text('Total Paid', doc.page.width - 240, totalsY + 24);
+      doc.text(`₹${totalPrice.toLocaleString()}`, doc.page.width - 90, totalsY + 24);
+
+      // Footer message
+      doc.fillColor('#9ca3af').fontSize(9).text('We look forward to seeing you at the event. Contact support if you have any questions.', 50, doc.page.height - 120, { width: doc.page.width - 100, align: 'center' });
+
+      doc.end();
+
+      // Wait for PDF to be written
+      await new Promise((resolve, reject) => {
+        writeStream.on('finish', resolve);
+        writeStream.on('error', reject);
+      });
+
+      // Send mail with invoice attached
+      const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: user.email,
+        subject: `🎉 Your Tickets for ${event.eventName} are Confirmed!`,
+        html: htmlContent.replace(`${user.name || "Valued Guest"}`, `${user.fullName || user.name || user.email}`),
+        attachments: [
+          {
+            filename: `Invoice_${ticket._id}.pdf`,
+            path: invoicePath,
+          },
+        ],
+      };
+
+      await transporter.sendMail(mailOptions);
+      console.log("✅ Confirmation email with invoice sent to", user.email);
+
+      // Cleanup invoice file after short delay
+      setTimeout(() => {
+        try {
+          fs.unlinkSync(invoicePath);
+        } catch (e) {
+          console.warn('Failed to delete temp invoice file', invoicePath, e.message);
+        }
+      }, 30000);
+    } catch (emailErr) {
+      console.error("❌ Failed to send email/attachment:", emailErr.message);
+    }
 ;}
 
     //   const htmlContent = `
