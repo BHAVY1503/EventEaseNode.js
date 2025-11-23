@@ -22,6 +22,7 @@ const path = require("path");
 const fs = require("fs");
 const PDFDocument = require("pdfkit");
 const nodemailer = require("nodemailer");
+const QRCode = require('qrcode');
 const { promisify } = require("util");
 const logger = require("../utils/logger"); // We'll create this
 const unlinkAsync = promisify(fs.unlink);
@@ -51,11 +52,8 @@ const razorpay = new Razorpay({
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
-/**
- * ===================================================================
- * CREATE ORDER - Server calculates amount (NEVER trust client)
- * ===================================================================
- */
+// * CREATE ORDER - Server calculates amount (NEVER trust client)
+
 const createOrder = async (req, res) => {
   console.log("REQ.USER = ", req.user);
 
@@ -253,11 +251,8 @@ const createOrder = async (req, res) => {
   }
 };
 
-/**
- * ===================================================================
- * VERIFY PAYMENT - With amount validation and status checks
- * ===================================================================
- */
+ // * VERIFY PAYMENT - With amount validation and status checks
+
 const verifyPayment = async (req, res) => {
   try {
     const {
@@ -415,9 +410,7 @@ const verifyPayment = async (req, res) => {
 };
 
 /**
- * ===================================================================
  * GENERATE AND SEND INVOICE (async helper)
- * ===================================================================
  */
 async function generateAndSendInvoice(payment) {
   try {
@@ -467,14 +460,19 @@ async function generateAndSendInvoice(payment) {
 
     // Seats (try to fetch ticket by paymentId if exists)
     let seatsText = '';
+    let ticket = null;
     try {
       const ticketModelLocal = require('../models/TicketModal');
-      const ticket = await ticketModelLocal.findOne({ paymentId: payment.paymentId });
+      ticket = await ticketModelLocal.findOne({ paymentId: payment.paymentId });
+      // fallback: maybe ticket id stored on payment (best-effort)
+      if (!ticket && payment.ticketId) {
+        ticket = await ticketModelLocal.findById(payment.ticketId);
+      }
       if (ticket && Array.isArray(ticket.selectedSeats) && ticket.selectedSeats.length > 0) {
         seatsText = ticket.selectedSeats.join(', ');
       }
     } catch (e) {
-      // ignore
+      // ignore ticket lookup failures - invoice should still be generated
     }
 
     if (seatsText) {
@@ -509,6 +507,24 @@ async function generateAndSendInvoice(payment) {
     doc.text(`₹${Number(amount).toLocaleString()}`, doc.page.width - 90, totalsY);
     doc.text('Total Paid', doc.page.width - 240, totalsY + 24).font('Helvetica-Bold');
     doc.text(`₹${Number(amount).toLocaleString()}`, doc.page.width - 90, totalsY + 24).font('Helvetica-Bold');
+
+    // QR code: embed a signed verification URL for the ticket (if available)
+    if (ticket && ticket._id) {
+      try {
+        const payload = ticket._id.toString();
+        const secret = process.env.QR_SECRET || process.env.RAZORPAY_KEY_SECRET || 'eventease_default_secret';
+        const sig = crypto.createHmac('sha256', secret).update(payload).digest('hex');
+        const verifyUrl = `${process.env.APP_URL || 'https://example.com'}/api/verify-ticket/${payload}/${sig}`;
+        const qrDataUrl = await QRCode.toDataURL(verifyUrl, { errorCorrectionLevel: 'H' });
+        const qrBuffer = Buffer.from(qrDataUrl.split(',')[1], 'base64');
+        const qrX = doc.page.width - 160;
+        const qrY = totalsY + 10;
+        doc.image(qrBuffer, qrX, qrY, { width: 110 });
+        doc.fillColor('#374151').fontSize(9).text('Scan to verify ticket', qrX - 10, qrY + 115, { width: 130, align: 'center' });
+      } catch (e) {
+        logger.warn('Failed to generate QR for invoice', { paymentId: payment._id, error: e.message });
+      }
+    }
 
     // Footer
     doc.fillColor('#9ca3af').fontSize(9).text('Thank you for booking with EventEase. Please keep this invoice for your records.', 50, doc.page.height - 120, { width: doc.page.width - 100, align: 'center' });
@@ -563,6 +579,32 @@ async function generateAndSendInvoice(payment) {
     throw error;
   }
 }
+
+/**
+ * Verify ticket endpoint (public) - validates HMAC signature embedded in QR
+ */
+const verifyTicket = async (req, res) => {
+  try {
+    const { ticketId, sig } = req.params;
+    if (!ticketId || !sig) return res.status(400).json({ success: false, message: 'Missing ticketId or signature' });
+
+    const secret = process.env.QR_SECRET || process.env.RAZORPAY_KEY_SECRET || 'eventease_default_secret';
+    const expected = crypto.createHmac('sha256', secret).update(ticketId).digest('hex');
+
+    // Use timingSafeEqual when comparing secrets
+    const ok = (expected.length === sig.length) && crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(sig));
+    if (!ok) return res.status(400).json({ success: false, valid: false, message: 'Invalid signature' });
+
+    const ticket = await ticketModel.findById(ticketId).populate('eventId').populate('userId');
+    if (!ticket) return res.status(404).json({ success: false, valid: false, message: 'Ticket not found' });
+
+    const isValid = ticket.status === 'Active';
+    return res.status(200).json({ success: true, valid: isValid, ticket: { id: ticket._id, status: ticket.status, event: ticket.eventId?.eventName, user: ticket.userId?.fullName || ticket.userId?.name } });
+  } catch (err) {
+    logger.error('Ticket verification error', { error: err.message });
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
 
 /**
  * Generate professional email HTML
@@ -640,9 +682,7 @@ function generateEmailHTML(payment, recipient) {
 }
 
 /**
- * ===================================================================
  * WEBHOOK HANDLER - With signature verification and IP whitelisting
- * ===================================================================
  */
 const webhookHandler = async (req, res) => {
   try {
@@ -769,9 +809,7 @@ const webhookHandler = async (req, res) => {
 };
 
 /**
- * ===================================================================
  * GET PAYMENT HISTORY
- * ===================================================================
  */
 const getPaymentHistory = async (req, res) => {
   try {
@@ -904,9 +942,7 @@ const getPaymentByOrderId = async (req, res) => {
 };
 
 /**
- * ===================================================================
  * PROCESS REFUND - With validation and email notification
- * ===================================================================
  */
 const processRefund = async (req, res) => {
   try {
@@ -1158,6 +1194,7 @@ module.exports = {
   getEventPrice,
   processRefund,
   verifyLimiter,
+  verifyTicket,
 };
 
 

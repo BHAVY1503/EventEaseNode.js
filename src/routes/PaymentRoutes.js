@@ -22,4 +22,7 @@ routes.get("/order/:orderId", verifyToken, checkRole(['User','Organizer','Admin'
 
 routes.get("/payment_history", verifyToken, checkRole(['User', 'Organizer']), razorpayController.getPaymentHistory)
 
+// Public ticket verification route used by QR scans (no auth)
+routes.get('/verify-ticket/:ticketId/:sig', razorpayController.verifyTicket);
+
 module.exports = routes;

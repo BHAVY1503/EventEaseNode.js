@@ -32,3 +32,6 @@
 {"amount":1000,"eventId":"6919a07ecec074d1f8124fdf","level":"info","message":"Order created successfully","orderId":"order_RiL8zQxDuG8Nh5","quantity":10,"userId":"69170d22af7863f7a65db846"}
 {"amount":1000,"level":"info","message":"Payment verified successfully","orderId":"order_RiL8zQxDuG8Nh5","paymentId":"pay_RiL9BunOlSpaT9","userId":"69170d22af7863f7a65db846"}
 {"level":"info","message":"Invoice generation deferred until booking completes","paymentId":"6920302e82d879fe050cb0e4"}
+{"amount":100,"eventId":"6919a07ecec074d1f8124fdf","level":"info","message":"Order created successfully","orderId":"order_RjBGZiYeOiWoi1","quantity":1,"userId":"69170d22af7863f7a65db846"}
+{"amount":100,"level":"info","message":"Payment verified successfully","orderId":"order_RjBGZiYeOiWoi1","paymentId":"pay_RjBGnYV9j7LqhQ","userId":"69170d22af7863f7a65db846"}
+{"level":"info","message":"Invoice generation deferred until booking completes","paymentId":"6922fd31b38f13f83ddfa82f"}

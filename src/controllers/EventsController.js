@@ -14,6 +14,8 @@ const path = require("path")
 const fs = require("fs");
 const nodemailer = require("nodemailer");
 const PDFDocument = require('pdfkit');
+const QRCode = require('qrcode');
+const crypto = require('crypto');
 const cloudinaryUtil = require("../utils/CloudinaryUtils");
 const { json } = require("stream/consumers");
 
@@ -859,6 +861,24 @@ const htmlContent = `
       doc.text(`₹${totalPrice.toLocaleString()}`, doc.page.width - 90, totalsY);
       doc.font('Helvetica-Bold').text('Total Paid', doc.page.width - 240, totalsY + 24);
       doc.text(`₹${totalPrice.toLocaleString()}`, doc.page.width - 90, totalsY + 24);
+
+      // QR code: embed signed verification URL for this ticket
+      try {
+        if (ticket && ticket._id) {
+          const payload = ticket._id.toString();
+          const secret = process.env.QR_SECRET || process.env.RAZORPAY_KEY_SECRET || 'eventease_default_secret';
+          const sig = crypto.createHmac('sha256', secret).update(payload).digest('hex');
+          const verifyUrl = `${process.env.APP_URL || 'https://example.com'}/api/verify-ticket/${payload}/${sig}`;
+          const qrDataUrl = await QRCode.toDataURL(verifyUrl, { errorCorrectionLevel: 'H' });
+          const qrBuffer = Buffer.from(qrDataUrl.split(',')[1], 'base64');
+          const qrX = doc.page.width - 160;
+          const qrY = totalsY + 10;
+          doc.image(qrBuffer, qrX, qrY, { width: 110 });
+          doc.fillColor('#374151').fontSize(9).text('Scan to verify ticket', qrX - 10, qrY + 115, { width: 130, align: 'center' });
+        }
+      } catch (e) {
+        console.warn('Failed to generate QR for invoice:', e.message);
+      }
 
       // Footer message
       doc.fillColor('#9ca3af').fontSize(9).text('We look forward to seeing you at the event. Contact support if you have any questions.', 50, doc.page.height - 120, { width: doc.page.width - 100, align: 'center' });
