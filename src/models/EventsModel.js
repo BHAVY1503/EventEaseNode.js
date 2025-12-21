@@ -56,6 +56,10 @@ const eventsSchema = new Schema({
         ref:"organizer",
         // required:true
     },
+    userId:{
+      type:Schema.Types.ObjectId,
+      ref:"user",
+    },
     eventImgUrl:{
         type:String,
     },
@@ -121,7 +125,11 @@ customZones: [
   enum: ["Pending", "Approved", "Rejected"],
   default: "Pending",
 },  
+ticketRate:{ 
+  type:Number
 
+}
+,
  rejectionReason: { type: String, default: "" },
 
     // rating: {

@@ -14,6 +14,8 @@ router.get("/user", verifyToken,checkRole(["Admin"]), userController.getAllUsers
 router.delete("/deleteuser/:id", verifyToken,checkRole(["Admin"]), userController.deleteUser);
 router.get("/user/getuserbytoken", verifyToken, userController.getUserByToken);
 router.get("/user/:id", verifyToken, userController.getUserById);
+router.get("/verify/:token", userController.verifyEmail);
+router.post("/user/resend-verification", verifyToken, userController.resendVerificationEmail)
 
 module.exports = router;
 

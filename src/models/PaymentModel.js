@@ -22,12 +22,20 @@ const paymentSchema = new mongoose.Schema({
   },
   paymentId: {
     type: String,
-    required: true
+    // required: true
   },
   amount: {
     type: Number,
     required: true
   },
+  refunds: [
+    {
+      refundId: String,
+      amount: Number, // rupees
+      status: String,
+      createdAt: Date
+    }
+  ],
   status: {
     type: String,
     enum: ['pending', 'completed', 'failed'],
@@ -36,7 +44,9 @@ const paymentSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now
-  }
+  },
+   updatedAt: {
+     type: Date },
 });
 
 module.exports = mongoose.model('payment', paymentSchema);

@@ -38,6 +38,62 @@ const ticketSchema = new mongoose.Schema({
   type: [String],
   default: [],
 },
-});
+
+status: {
+  type: String,
+  enum: ["Active", "Cancelled", "Refunded"],
+  default: "Active",
+},
+
+cancellationReason: {
+  type: String,
+  default: "",
+},
+
+cancellationDate: {
+  type: Date,
+},
+
+refundAmount: {
+  type: Number,
+  default: 0,
+},
+
+refundStatus: {
+  type: String,
+  enum: ["Pending Approval", "Pending", "Processing", "Completed", "Rejected", "No Refund"],
+  default: "Pending Approval"
+},
+
+adminApproval: {
+  type: String,
+  enum: ["Pending", "Approved", "Rejected"],
+  default: "Pending"
+},
+
+adminRemark: {
+  type: String,
+  default: ""
+},
+
+ adminActionDate: {
+    type: Date,
+    default: null
+  },
+  adminId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    default: null
+  },
+
+refundTransactionId: {
+  type: String,
+  default: ""
+},
+
+refundDate: {
+  type: Date,
+}
+},{ timestamps: true });
 
 module.exports = mongoose.model("ticket", ticketSchema);

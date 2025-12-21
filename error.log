@@ -1,0 +1,15 @@
+{"level":"error","message":"Order creation failed","userId":"69170d22af7863f7a65db846"}
+{"level":"error","message":"Order creation failed","userId":"69170d22af7863f7a65db846"}
+{"level":"error","message":"Order creation failed","userId":"69170d22af7863f7a65db846"}
+{"level":"error","message":"Order creation failed","userId":"69170d22af7863f7a65db846"}
+{"level":"error","message":"Order creation failed","userId":"69170d22af7863f7a65db846"}
+{"level":"error","message":"Order creation failed","userId":"69170d22af7863f7a65db846"}
+{"level":"error","message":"Order creation failed","userId":"69170d22af7863f7a65db846"}
+{"level":"error","message":"Order creation failed","userId":"69170d22af7863f7a65db846"}
+{"level":"error","message":"Order creation failed","userId":"69170d22af7863f7a65db846"}
+{"eventId":"690f4b35ad03e0962be8e096","level":"error","message":"Order creation failed (razorpay.orders.create)","razorError":"{\"statusCode\":400,\"error\":{\"code\":\"BAD_REQUEST_ERROR\",\"description\":\"receipt: the length must be no more than 40.\",\"metadata\":{},\"reason\":\"input_validation_failed\",\"source\":\"business\",\"step\":\"payment_initiation\"}}","userId":"69170d22af7863f7a65db846"}
+{"eventId":"690f4b35ad03e0962be8e096","level":"error","message":"Order creation failed (razorpay.orders.create)","razorError":{"code":null,"description":null,"details":{"code":"BAD_REQUEST_ERROR","description":"receipt: the length must be no more than 40.","metadata":{},"reason":"input_validation_failed","source":"business","step":"payment_initiation"}},"userId":"69170d22af7863f7a65db846"}
+{"calculatedAmount":0,"eventId":"69199d8405138d9d71e54b7c","level":"error","message":"Invalid calculated amount","userId":"69170d22af7863f7a65db846"}
+{"calculatedAmount":0,"eventId":"69199d8405138d9d71e54b7c","level":"error","message":"Invalid calculated amount","userId":"69170d22af7863f7a65db846"}
+{"calculatedAmount":0,"eventId":"69199d8405138d9d71e54b7c","level":"error","message":"Invalid calculated amount","userId":"69170d22af7863f7a65db846"}
+{"calculatedAmount":0,"eventId":"69199d8405138d9d71e54b7c","level":"error","message":"Invalid calculated amount","userId":"69170d22af7863f7a65db846"}

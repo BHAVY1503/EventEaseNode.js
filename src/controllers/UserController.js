@@ -5,6 +5,9 @@ const bcrypt = require("bcrypt")
 const jwt = require("jsonwebtoken")
 const SECRET_KEY = "secret"
 const { OAuth2Client } = require("google-auth-library"); 
+const crypto = require("crypto");
+const { sendingMail } = require("../utils/MailUtils");
+
 
 const client = new OAuth2Client("342037145091-qvhlig4d6tn8p35ho40kc8c468mpnqug.apps.googleusercontent.com")
  
@@ -30,7 +33,9 @@ const googleLogin = async (req, res) => {
       user = await userModel.create({
         email,
         fullName:name,
-        password: "google-oauth", // dummy password
+        // password: "google-oauth", // dummy password
+        password:null,
+        loginType:"Google",
         roleId: userRole._id // 
       });
     }
@@ -54,6 +59,18 @@ const loginUser = async (req, res) => {
   try {
     const foundUser = await userModel.findOne({ email }).populate("roleId");
     if (!foundUser) return res.status(404).json({ message: "Email not found" });
+    //     if (!foundUser.isVerified) {
+    //   return res.status(403).json({
+    //     message: "Please verify your email before logging in."
+    //   });
+    // }
+
+    // Block password login for Google users
+    if (foundUser.loginType === "google") {
+  return res.status(403).json({
+    message: "This account is registered with Google. Please login using Google."
+  });
+    }
 
     const isMatch = bcrypt.compareSync(password, foundUser.password);
     if (!isMatch)
@@ -100,27 +117,132 @@ const loginUser = async (req, res) => {
 //   }
 // };
  
-const signup = async(req,res)=>{
+// const signup = async(req,res)=>{
  
-    try{
+//     try{
+//     const salt = bcrypt.genSaltSync(10);
+//     const hashedPassword = bcrypt.hashSync(req.body.password, salt)
+//     req.body.password = hashedPassword
+//     const createUser = await userModel.create(req.body)
+
+//     res.status(201).json({
+//         message:"user Created..",
+//         data: createUser
+//     })
+
+//     }catch(err){
+//         console.log(err)
+//         res.status(500).json({
+//             message:"error creating user",
+//             data:err.message
+//         })
+//     } 
+// }
+
+const signup = async (req, res) => {
+  try {
     const salt = bcrypt.genSaltSync(10);
-    const hashedPassword = bcrypt.hashSync(req.body.password, salt)
-    req.body.password = hashedPassword
-    const createUser = await userModel.create(req.body)
+    const hashedPassword = bcrypt.hashSync(req.body.password, salt);
+
+     // FORCE USER ROLE (Protect against hackers)
+    const userRole = await roleModel.findOne({ name: "User" });
+    req.body.roleId = userRole._id;
+
+    // Generate verification token
+    const verificationToken = crypto.randomBytes(32).toString("hex");
+
+    const user = await userModel.create({
+      ...req.body,
+      password: hashedPassword,
+      verificationToken,
+      verificationTokenExpiry: Date.now() + 24 * 60 * 60 * 1000, //24 hours expiry
+      isVerified: false
+    });
+
+    // Send email
+    const verifyLink = `http://localhost:5173/verify/${verificationToken}`;
+
+    await sendingMail(
+      user.email,
+      "Verify Your EventEase Account",
+      `
+        <h2>Verify Your Email</h2>
+        <p>Click the link below to activate your account:</p>
+        <a href="${verifyLink}" target="_blank">Verify Now</a>
+      `
+    );
 
     res.status(201).json({
-        message:"user Created..",
-        data: createUser
-    })
+      message: "User registered. Please check your email to verify.",
+      data: user
+    });
 
-    }catch(err){
-        console.log(err)
-        res.status(500).json({
-            message:"error creating user",
-            data:err.message
-        })
-    } 
-}
+  } catch (err) {
+    res.status(500).json({
+      message: "Error creating user",
+      data: err.message
+    });
+  }
+};
+
+const verifyEmail = async (req, res) => {
+  try {
+    const { token } = req.params;
+
+    const user = await userModel.findOne({ verificationToken: token });
+
+    if (!user) {
+      return res.status(400).json({ message: "Invalid or expired token" });
+    }
+
+    user.isVerified = true;
+    user.verificationToken = null;
+    await user.save();
+
+    res.status(200).json({ message: "Email verified successfully" });
+
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+const resendVerificationEmail = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    const user = await userModel.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (user.isVerified) {
+      return res.status(400).json({ message: "User already verified" });
+    }
+
+    // Generate new verification token
+    const token = crypto.randomBytes(32).toString("hex");
+    user.verificationToken = token;
+    await user.save();
+
+    // Generate verification URL
+    const verifyURL = `http://localhost:5173/verify/${token}`;
+
+    // Email content
+    const htmlContent = `
+      <h2>Email Verification</h2>
+      <p>Click the link below to verify your email:</p>
+      <a href="${verifyURL}" target="_blank">Verify Email</a>
+    `;
+
+    await sendingMail(user.email, "Verify Your Email", htmlContent);
+
+    res.status(200).json({ message: "Verification email resent successfully" });
+  } catch (err) {
+    console.error("Resend verification failed:", err);
+    res.status(500).json({
+      message: "Failed to resend verification email",
+      error: err.message,
+    });
+  }
+};
 
 
 const getAllUsers = async(req,res)=>{
@@ -212,6 +334,8 @@ module.exports = {
     loginUser,
     deleteUser, 
     getUserByToken,
-    googleLogin
+    googleLogin,
+    verifyEmail,
+    resendVerificationEmail,
 
  }

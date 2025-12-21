@@ -35,7 +35,16 @@ const userSchema = new Schema({
 cityId: {
   type: mongoose.Schema.Types.ObjectId,
   ref: "city"
+},
+isVerified: {
+  type: Boolean,
+  default: false
+},
+verificationToken: {
+  type: String,
+  default: null
 }
+
 
 })
 
