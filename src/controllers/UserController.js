@@ -33,7 +33,9 @@ const googleLogin = async (req, res) => {
       user = await userModel.create({
         email,
         fullName:name,
-        password: "google-oauth", // dummy password
+        // password: "google-oauth", // dummy password
+        password:null,
+        loginType:"Google",
         roleId: userRole._id // 
       });
     }
@@ -57,11 +59,18 @@ const loginUser = async (req, res) => {
   try {
     const foundUser = await userModel.findOne({ email }).populate("roleId");
     if (!foundUser) return res.status(404).json({ message: "Email not found" });
-//     if (!foundUser.isVerified) {
-//   return res.status(403).json({
-//     message: "Please verify your email before logging in."
-//   });
-// }
+    //     if (!foundUser.isVerified) {
+    //   return res.status(403).json({
+    //     message: "Please verify your email before logging in."
+    //   });
+    // }
+
+    // Block password login for Google users
+    if (foundUser.loginType === "google") {
+  return res.status(403).json({
+    message: "This account is registered with Google. Please login using Google."
+  });
+    }
 
     const isMatch = bcrypt.compareSync(password, foundUser.password);
     if (!isMatch)
@@ -135,6 +144,10 @@ const signup = async (req, res) => {
     const salt = bcrypt.genSaltSync(10);
     const hashedPassword = bcrypt.hashSync(req.body.password, salt);
 
+     // FORCE USER ROLE (Protect against hackers)
+    const userRole = await roleModel.findOne({ name: "User" });
+    req.body.roleId = userRole._id;
+
     // Generate verification token
     const verificationToken = crypto.randomBytes(32).toString("hex");
 
@@ -142,6 +155,7 @@ const signup = async (req, res) => {
       ...req.body,
       password: hashedPassword,
       verificationToken,
+      verificationTokenExpiry: Date.now() + 24 * 60 * 60 * 1000, //24 hours expiry
       isVerified: false
     });
 

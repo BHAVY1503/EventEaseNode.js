@@ -53,3 +53,11 @@
 {"event":"order.paid","level":"info","message":"Webhook received","paymentId":"pay_RjVhHR8fSfeWxH"}
 {"event":"order.paid","level":"info","message":"Webhook: unhandled event"}
 {"level":"info","message":"Payment already processed","paymentId":"pay_RjVhHR8fSfeWxH","userId":"69170d22af7863f7a65db846"}
+{"amount":100,"eventId":"6919a07ecec074d1f8124fdf","level":"info","message":"Order created successfully","orderId":"order_RnvoavOylGZMhB","quantity":1,"userId":"69170d22af7863f7a65db846"}
+{"event":"payment.captured","level":"info","message":"Webhook received","paymentId":"pay_RnvowsuOMYlKq4"}
+{"level":"info","message":"Webhook: payment captured and DB updated","orderId":"order_RnvoavOylGZMhB"}
+{"level":"info","message":"Payment already processed","paymentId":"pay_RnvowsuOMYlKq4","userId":"69170d22af7863f7a65db846"}
+{"amount":1196,"eventId":"6932d28db93529aafaba6508","level":"info","message":"Order created successfully","orderId":"order_Rnw6HshyIkUjye","quantity":4,"userId":"69171175ddc4243c7a40b277"}
+{"event":"payment.captured","level":"info","message":"Webhook received","paymentId":"pay_Rnw6j1gScSqfkC"}
+{"level":"info","message":"Webhook: payment captured and DB updated","orderId":"order_Rnw6HshyIkUjye"}
+{"level":"info","message":"Payment already processed","paymentId":"pay_Rnw6j1gScSqfkC","userId":"69171175ddc4243c7a40b277"}

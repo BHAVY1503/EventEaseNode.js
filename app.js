@@ -2,6 +2,7 @@ const express = require("express")
 const { default: mongoose } = require("mongoose")
 const app = express()
 const cros = require("cors")
+const dotenv = require("dotenv")
 app.use(cros())
 // Capture raw body buffer for webhook signature verification
 app.use(express.json({
@@ -54,7 +55,7 @@ app.use(stadiumRoutes)
 const paymentRoutes = require("./src/routes/PaymentRoutes")
 app.use("/payment",paymentRoutes)
 
-mongoose.connect("mongodb://127.0.0.1:27017/EventEase").then(()=>{
+mongoose.connect(process.env.MONGODB_URL).then(()=>{
     console.log("database connected....")
 
     //  Start WhatsApp Reminder Cron Job when server is started

@@ -73,7 +73,9 @@ const googleLogin = async (req, res) => {
         name,
         email,
         profileImg: picture,
-        password: "google-oauth", 
+        // password: "google-oauth", 
+        password: null,
+        loginType: "google",
         isVerified: true,             // ⭐ FIX 1 – Google user automatically verified
         verificationToken: null,      // ⭐ FIX 2 – No need for email verification
         roleId: organizerRole._id,    // ⭐ FIX 3 – Save role properly
@@ -113,7 +115,7 @@ const organizerRegister = async (req, res) => {
     const salt = bcrypt.genSaltSync(10);
     const hashedPassword = bcrypt.hashSync(password, salt);
 
-    // ⭐ Fetch role from roles collection
+    // Fetch role from roles collection
     const organizerRole = await roleModel.findOne({ name: "Organizer" });
     if (!organizerRole) {
       return res.status(500).json({ message: "Organizer role not found" });
@@ -130,6 +132,7 @@ const organizerRegister = async (req, res) => {
       organizationName,
       isVerified: false,
       verificationToken,
+      verificationTokenExpiry: Date.now() + 24*60*60*1000,
       roleId: organizerRole._id    // ⭐ IMPORTANT: Save roleId
     });
 
@@ -170,6 +173,12 @@ const organizerSignin = async (req, res) => {
     if (!organizer) {
       return res.status(404).json({ message: "Organizer not found.." });
     }
+
+    if (organizer.loginType === "google") {
+    return res.status(403).json({
+    message: "This organizer registered with Google. Please login using Google."
+   });
+   }
 
     const isMatch = bcrypt.compareSync(password, organizer.password);
     if (!isMatch) {

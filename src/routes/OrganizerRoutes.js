@@ -27,30 +27,17 @@ routes.get("/verify/:token", OrganizerController.verifyOrganizerEmail);
 routes.get("/allorganizers", verifyToken, checkRole(["Admin"]), OrganizerController.getAllOrganizers);
 routes.get("/organizer/self", verifyToken, checkRole(["Organizer", "Admin"]), OrganizerController.getOrganizerSelf);
 
-// ❗ dynamic route - MUST COME LAST
+//  dynamic route 
 routes.get("/organizer/:id", verifyToken, checkRole(["Organizer", "Admin"]), OrganizerController.getOrganizerById);
 
-routes.post("/updateorganizer/:id", verifyToken, checkRole(["Organizer"]), OrganizerController.updateOrganizer);
+routes.post("/updateorganizer/:id", verifyToken, checkRole(["Organizer", "Admin"]), OrganizerController.updateOrganizer);
 routes.delete("/deleteorganizer/:id", verifyToken, checkRole(["Admin"]), OrganizerController.deleteOrganizer);
 
 routes.post("/resend-verification", verifyToken, OrganizerController.resendOrganizerVerification);
 
 
 
-// Public routes
-// routes.post("/organizer/signup", OrganizerController.organizerRegister);
-// routes.post("/signin", OrganizerController.organizerSignin);
-// routes.post("/googlelogin",OrganizerController.googleLogin);
 
-// // Protected routes (only for authenticated organizers)
-// routes.get("/allorganizers", verifyToken, checkRole(["Admin"]), OrganizerController.getAllOrganizers);
-// routes.get("/organizer/self", verifyToken, checkRole(["Organizer", "Admin"]), OrganizerController.getOrganizerSelf);
-// routes.get("/organizer/:id", verifyToken, checkRole(["Organizer", "Admin"]), OrganizerController.getOrganizerById);
-// routes.post("/updateorganizer/:id", verifyToken, checkRole(["Organizer"]), OrganizerController.updateOrganizer);
-// routes.delete("/deleteorganizer/:id", verifyToken, checkRole(["Admin"]), OrganizerController.deleteOrganizer);
-
-// routes.get("/verify/:token", OrganizerController.verifyOrganizerEmail);
-// routes.post("/resend-verification", verifyToken, OrganizerController.resendOrganizerVerification)
 
 module.exports = routes;
 
