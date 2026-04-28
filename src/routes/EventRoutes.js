@@ -1,3 +1,5 @@
+console.log("EventRoutes loaded");
+
 const express = require("express")
 const routes = express.Router()
 const eventController = require("../controllers/EventsController")

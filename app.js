@@ -55,6 +55,11 @@ app.use(stadiumRoutes)
 const paymentRoutes = require("./src/routes/PaymentRoutes")
 app.use("/payment",paymentRoutes)
 
+//aibot
+const aiChatRoutes = require("./src/routes/aiChat");
+app.use("/api/ai", aiChatRoutes);
+
+
 mongoose.connect(process.env.MONGODB_URL).then(()=>{
     console.log("database connected....")
 
