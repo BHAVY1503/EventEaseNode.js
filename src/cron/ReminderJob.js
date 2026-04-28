@@ -6,7 +6,7 @@ const { sendingMail } = require("../utils/MailUtils");
 
 // Runs every day at 9 AM server time
 cron.schedule("0 9 * * *", async () => {
-  console.log("🕘 Running daily reminder job...");
+  console.log("Running daily reminder job...");
 
   try {
     const now = new Date();

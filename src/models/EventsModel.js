@@ -132,6 +132,11 @@ ticketRate:{
 ,
  rejectionReason: { type: String, default: "" },
 
+ embedding: {
+  type: [Number],
+  index: false
+},
+
     // rating: {
     // type: Number,
     // min: 1,
