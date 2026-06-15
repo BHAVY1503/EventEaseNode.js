@@ -69,7 +69,7 @@ mongoose.connect(process.env.MONGODB_URL).then(()=>{
     require("./src/cron/ReminderJob");
 })
 
-const PORT = 3100
+const PORT = process.env.PORT || 3100
 app.listen(PORT,()=>{
     console.log("server started on port number", PORT)
 })
